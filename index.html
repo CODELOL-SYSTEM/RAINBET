@@ -1,79 +1,245 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#080d13"><title>NOVA PLAY — Arcade 3D</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOVA PLAY | 3D Arcade</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
-:root{--bg:#080d13;--panel:#111a25;--panel2:#182433;--line:#263746;--muted:#8b9aaa;--white:#f4f8fb;--green:#49efa7;--green2:#19bd7d;--gold:#ffc95b;--red:#ff627c;--blue:#77bfff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#213c48 0,#0b141d 45%,#070b10 100%);color:var(--white);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh}button,input{font:inherit}button{cursor:pointer;border:0;color:inherit}button:disabled{opacity:.4;cursor:not-allowed}
-.shell{max-width:1220px;margin:auto;padding:18px 24px 65px}.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:11px;font-family:'Space Grotesk';font-size:22px;font-weight:700;letter-spacing:-1px}.brandmark{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#9dffd2,#21bd83);color:#05251a;box-shadow:0 8px 30px #31e99b3d;font-size:22px}.brand em{font-style:normal;color:var(--green)}.topright{display:flex;align-items:center;gap:10px}.balance{border:1px solid #314756;background:#101d28;border-radius:14px;padding:8px 14px;min-width:135px}.balance small{display:block;font-size:9px;color:var(--muted);letter-spacing:1.5px;font-weight:800}.balance strong{font-family:'Space Grotesk';font-size:20px;color:var(--green)}.profilebtn{background:#1a2a38;border:1px solid #354a5c;border-radius:12px;padding:11px 14px;font-weight:800;font-size:12px}
-.hero{position:relative;overflow:hidden;margin:17px 0 22px;border:1px solid #2b4a52;border-radius:25px;padding:30px 32px;min-height:210px;background:linear-gradient(110deg,#142b30,#172a38 56%,#22273a);display:flex;align-items:center;justify-content:space-between;gap:20px}.hero:before{content:"";position:absolute;width:400px;height:400px;right:3%;top:-230px;border-radius:50%;background:#46e8a31b;filter:blur(5px)}.heroCopy{position:relative;z-index:2}.kicker{font-size:10px;letter-spacing:2px;font-weight:900;color:var(--green)}.hero h1{font:700 clamp(34px,5vw,54px)/.98 'Space Grotesk';letter-spacing:-2.5px;margin:12px 0}.hero h1 span{color:var(--green)}.hero p{max-width:560px;color:#bdcbd3;font-size:13px;line-height:1.65;margin:0}.heroVisual{width:250px;height:155px;position:relative;z-index:1;flex:none}.orb{position:absolute;border-radius:50%;filter:blur(1px)}.orb.one{width:145px;height:145px;right:22px;top:2px;background:radial-gradient(circle at 30% 25%,#a6ffda,#22a979 55%,#145d53);box-shadow:0 0 70px #35e9a54d}.orb.two{width:70px;height:70px;right:0;top:70px;background:linear-gradient(145deg,#ffe49b,#d18c2c);box-shadow:0 0 40px #ffca5b55}.heroIcon{position:absolute;right:54px;top:27px;font-size:75px;filter:drop-shadow(0 12px 8px #0007)}.heroStats{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.stat{font-size:10px;color:#d4e3e6;background:#0d1c26;border:1px solid #38505a;padding:7px 10px;border-radius:9px}.stat b{color:var(--green)}
-.notice{background:#171a1e;border:1px solid #494039;border-radius:11px;padding:11px 14px;color:#b9c2c9;font-size:10px;line-height:1.6;margin-bottom:25px}.notice b{color:var(--gold)}
-.sectionhead{display:flex;align-items:end;justify-content:space-between;margin:27px 0 13px}.sectionhead h2{font:700 20px 'Space Grotesk';margin:0;letter-spacing:-.5px}.sectionhead span{font-size:10px;color:var(--muted)}.games{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.gamecard{background:linear-gradient(155deg,#172533,#101923);border:1px solid #293e4e;border-radius:19px;overflow:hidden;text-align:left;padding:0;transition:.22s}.gamecard:hover{transform:translateY(-4px);border-color:#4e8c79;box-shadow:0 17px 42px #0005}.cover{height:170px;position:relative;background:linear-gradient(140deg,#183d41,#17253a);overflow:hidden}.cover canvas{width:100%;height:100%;display:block}.cover:after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,#101923)}.coverTag{position:absolute;z-index:2;top:12px;left:12px;background:#07141dbb;border:1px solid #ffffff25;border-radius:7px;padding:6px 8px;font-size:9px;font-weight:900;letter-spacing:1px}.cardInfo{padding:15px 16px 16px}.cardInfo h3{font:700 17px 'Space Grotesk';margin:0 0 6px}.cardInfo p{font-size:11px;color:#9cabb9;line-height:1.5;margin:0 0 13px;min-height:32px}.cardFoot{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aab9c5}.playTag{background:#164a39;color:#79ffc1;border:1px solid #2c775c;border-radius:8px;padding:7px 10px;font-weight:900}
-.minigames{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.mini{border:1px solid #2b3e4d;background:linear-gradient(135deg,#172534,#111a25);border-radius:15px;padding:15px;display:flex;align-items:center;gap:12px;text-align:left}.miniIcon{width:43px;height:43px;border-radius:13px;background:#23394a;display:grid;place-items:center;font-size:22px;flex:none}.mini b{display:block;font-size:12px}.mini small{display:block;color:#95a5b4;font-size:10px;margin-top:3px}
-.page{display:none}.page.active{display:block}.back{margin:13px 0 17px;background:#1b2b3b;border:1px solid #354b60;border-radius:10px;padding:9px 13px;font-size:11px;font-weight:800}.gameTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}.gameTitle h2{font:700 25px 'Space Grotesk';margin:0}.gameTitle p{font-size:11px;color:var(--muted);margin:4px 0 0}.panel{background:linear-gradient(145deg,#121e2b,#0e1721);border:1px solid #2c4051;border-radius:21px;padding:17px;box-shadow:0 18px 55px #0004}.controls{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin:10px 0 14px}.field{flex:1;min-width:125px}.field label{display:block;color:#92a3b2;font-size:9px;font-weight:900;letter-spacing:1.1px;margin-bottom:7px}.field input{width:100%;background:#09121b;border:1px solid #344a5d;color:white;border-radius:10px;padding:12px;outline:none;font-size:14px}.field input:focus{border-color:var(--green)}.primary{background:linear-gradient(180deg,#64f5b5,#1bbd7e);color:#062419;font-weight:1000;border-radius:11px;padding:13px 18px;box-shadow:0 7px 20px #28d89124}.secondary{background:#233448;border:1px solid #3b5268;border-radius:10px;padding:11px 13px;font-size:11px;font-weight:800}.danger{background:#482430;border:1px solid #794052;color:#ffa3b2;border-radius:10px;padding:11px 13px;font-size:11px;font-weight:800}.bigMulti{font:700 clamp(40px,8vw,70px)/1 'Space Grotesk';letter-spacing:-3px;text-align:center;color:var(--green);text-shadow:0 0 30px #3df5a644;margin:8px 0}.mutedCenter{text-align:center;color:#a3b1bf;font-size:11px}.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
-.stage3d{height:390px;border-radius:16px;overflow:hidden;background:linear-gradient(#91c8d8,#d7e6d5 54%,#405c47);position:relative;border:1px solid #456273}.stage3d canvas{width:100%;height:100%;display:block}.stageLabel{position:absolute;top:11px;left:12px;z-index:2;background:#07141dbb;border:1px solid #ffffff2c;border-radius:8px;padding:7px 10px;font-size:9px;font-weight:900;letter-spacing:1px}.stageRight{position:absolute;right:12px;top:11px;z-index:2;background:#07141dbb;border:1px solid #ffffff2c;border-radius:8px;padding:7px 10px;font-size:10px}
-.rainGrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin:17px 0}.tile{aspect-ratio:1;border-radius:9px;background:linear-gradient(145deg,#2b4357,#172738);border:1px solid #425c70;font-size:clamp(10px,2vw,18px);font-weight:900;transition:.16s}.tile:not(:disabled):hover{transform:translateY(-3px);border-color:#81ffd0}.tile.good{background:linear-gradient(145deg,#5ff1b2,#138c64);color:#05291b;box-shadow:0 0 19px #42f3a255}.tile.bad{background:linear-gradient(145deg,#ff7589,#a82b4a);color:white}.tile:disabled{cursor:default}.winFlash{display:none;text-align:center;padding:15px;border-radius:14px;margin:12px 0;background:linear-gradient(110deg,#174c39,#153a39);border:1px solid #4be9a6}.winFlash.show{display:block;animation:winPop .35s ease,winGlow 1.3s infinite alternate}.winFlash strong{display:block;font:700 30px 'Space Grotesk';color:#a0ffd0}.winFlash span{font-size:10px;color:#d5ffea}@keyframes winPop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}@keyframes winGlow{to{box-shadow:0 0 35px #32e59c44}}
-.miniStage{border:1px solid #2b4052;border-radius:16px;background:linear-gradient(145deg,#172b39,#0d1825);padding:24px;text-align:center;min-height:220px;display:grid;place-items:center}.miniStage h3{font:700 23px 'Space Grotesk';margin:0 0 8px}.miniStage p{font-size:12px;color:#9dafbd}.miniBig{font:700 52px 'Space Grotesk';color:var(--green);margin:10px}
-.footer{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:32px;color:#7f91a0;font-size:9px}.footer span{border:1px solid #253746;padding:8px 11px;border-radius:9px}
-.shade{display:none;position:fixed;inset:0;z-index:20;background:#02060bd9;backdrop-filter:blur(9px);align-items:center;justify-content:center;padding:16px}.shade.open{display:flex}.modal{width:min(100%,450px);background:linear-gradient(145deg,#1a2b3a,#0e1824);border:1px solid #3b5367;border-radius:23px;padding:23px;position:relative;box-shadow:0 30px 100px #000c}.close{position:absolute;right:13px;top:13px;background:#2a3c4c;border-radius:9px;padding:7px 10px}.modal h2{font:700 24px 'Space Grotesk';margin:5px 0}.modal p{font-size:11px;color:#a7b7c5;line-height:1.6}.amounts{display:flex;gap:8px;flex-wrap:wrap;margin:11px 0 16px}.amounts button{background:#263b4d;border:1px solid #40586d;border-radius:9px;padding:8px 13px;font-size:11px;font-weight:900}.paypal{width:100%;background:#ffc439;color:#08234b;border-radius:11px;padding:14px;font-weight:1000;margin-top:10px}.paypal small{font-size:16px}.fineprint{margin-top:13px;background:#0d1a26;border:1px solid #30485a;padding:11px;border-radius:10px;font-size:9px;color:#aab8c5;line-height:1.6}.toast{position:fixed;z-index:50;left:50%;bottom:22px;transform:translate(-50%,20px);background:#173b32;border:1px solid #43dca0;color:#eafff4;border-radius:11px;padding:11px 15px;font-size:11px;font-weight:900;opacity:0;transition:.25s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
-@media(max-width:760px){.shell{padding:10px 13px 45px}.games{grid-template-columns:1fr 1fr;gap:10px}.cover{height:130px}.minigames{grid-template-columns:1fr}.hero{padding:23px;min-height:185px}.heroVisual{width:145px;transform:scale(.8);transform-origin:right center}.stage3d{height:330px}.rainGrid{gap:4px}.tile{border-radius:6px}}
-@media(max-width:440px){.brand{font-size:18px}.brandmark{width:38px;height:38px}.profilebtn{padding:10px}.balance{min-width:115px;padding:7px 10px}.balance strong{font-size:17px}.heroVisual{display:none}.games{gap:8px}.cover{height:110px}.cardInfo{padding:12px}.cardInfo h3{font-size:14px}.cardInfo p{font-size:10px;min-height:45px}.gameTitle h2{font-size:21px}.rainGrid{gap:3px}.tile{border-radius:4px}}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg:#080c17;
+  --panel:#111a2b;
+  --border:#293a55;
+  --cyan:#40ddff;
+  --green:#49e8a1;
+  --purple:#a98aff;
+  --red:#ff5574;
+  --text:#f5f7ff;
+  --muted:#9baac3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,Arial,sans-serif;
+}
+header{
+  height:68px;padding:0 5%;display:flex;align-items:center;
+  justify-content:space-between;position:sticky;top:0;z-index:10;
+  background:#080c17ed;border-bottom:1px solid var(--border);
+  backdrop-filter:blur(15px);
+}
+.logo{
+  font:900 22px Orbitron,sans-serif;letter-spacing:3px;
+  color:var(--cyan);text-shadow:0 0 20px #40ddff55;
+}
+.balance{
+  color:var(--green);border:1px solid #49e8a155;
+  background:#49e8a111;padding:10px 14px;border-radius:12px;
+  font-weight:800;font-size:13px;
+}
+main{max-width:1150px;margin:auto;padding:24px 16px 60px}
+.hero{
+  text-align:center;padding:45px 18px;border:1px solid #40ddff44;
+  border-radius:22px;background:radial-gradient(ellipse at top,#1b4163,#10172b 70%);
+}
+.hero h1{font:900 clamp(32px,7vw,60px) Orbitron;margin:12px 0}
+.hero h1 span{color:var(--cyan)}
+.hero p{color:var(--muted);line-height:1.7}
+.eyebrow{font:700 11px Orbitron;letter-spacing:4px;color:var(--green)}
+.section-title{font:700 18px Orbitron;margin:28px 0 15px}
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:14px;
+}
+.game-card{
+  padding:22px;border:1px solid var(--border);border-radius:18px;
+  background:linear-gradient(145deg,#18263e,#101727);
+  cursor:pointer;transition:.2s;
+}
+.game-card:hover{
+  transform:translateY(-4px);border-color:var(--cyan);
+  box-shadow:0 12px 35px #40ddff16;
+}
+.game-number{font:900 36px Orbitron;color:var(--cyan)}
+.game-card h3{font:700 14px Orbitron;letter-spacing:1px}
+.game-card p{font-size:13px;line-height:1.6;color:var(--muted)}
+.tag{
+  display:inline-block;padding:5px 9px;border-radius:5px;
+  background:#40ddff18;color:var(--cyan);font-size:10px;
+  font-weight:800;letter-spacing:1px;
+}
+.panel{
+  padding:19px;border:1px solid var(--border);
+  border-radius:18px;background:var(--panel);margin-top:18px;
+}
+.hidden{display:none!important}
+button{
+  padding:12px 17px;border:0;border-radius:10px;
+  background:var(--cyan);color:#07111d;font-weight:800;
+  cursor:pointer;transition:.15s;
+}
+button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.green{background:var(--green)}
+.purple{background:var(--purple);color:#130b25}
+.dark{background:#293a55;color:white;border:1px solid #435875}
+.red{background:var(--red);color:white}
+.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.game-head{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:10px;flex-wrap:wrap;
+}
+.game-head h2{font:700 19px Orbitron}
+#viewport{
+  height:430px;width:100%;border-radius:14px;overflow:hidden;
+  background:#15263d;border:1px solid #354967;
+}
+#viewport canvas{width:100%;height:100%;display:block}
+#description{font-size:13px;color:var(--muted);margin-top:12px}
+#message{min-height:24px;margin-top:12px;color:var(--green);font-weight:700;font-size:13px}
+#score{font:700 13px Orbitron;color:var(--cyan);margin-top:9px}
+#rainGrid{
+  display:grid;grid-template-columns:repeat(10,minmax(0,1fr));
+  gap:5px;margin-top:15px;
+}
+.rain-tile{
+  padding:0;aspect-ratio:1;border:1px solid #536989;
+  border-radius:6px;background:#243d5c;color:white;
+  font-size:11px;
+}
+.rain-tile.safe{background:#12694e;border-color:var(--green)}
+.rain-tile.trap{background:#902b48;border-color:var(--red)}
+.mini-card{
+  background:#17243a;border:1px solid var(--border);
+  border-radius:15px;padding:17px;
+}
+.mini-card h3{font:700 13px Orbitron}
+.mini-card p{font-size:12px;color:var(--muted);line-height:1.6}
+input{
+  width:100%;padding:12px;background:#080f1c;color:white;
+  border:1px solid #40516b;border-radius:9px;margin:8px 0 12px;
+}
+label{font-size:12px;color:var(--muted)}
+#miniContent{margin-top:18px}
+#miniMessage{color:var(--green);font-weight:700;margin-top:12px}
+footer{text-align:center;padding:25px;color:#77869e;font-size:11px}
+@media(max-width:550px){
+  header{padding:0 12px;height:60px}
+  .logo{font-size:17px}
+  .balance{font-size:11px;padding:8px}
+  #viewport{height:330px}
+  #rainGrid{gap:3px}
+  .rain-tile{font-size:9px}
+}
 </style>
 </head>
+
 <body>
-<div class="shell">
-<header class="topbar">
- <div class="brand"><div class="brandmark">✦</div><span>NOVA <em>PLAY</em></span></div>
- <div class="topright"><button class="profilebtn" onclick="openProfile()">👤 Profil</button><div class="balance"><small>MA CAGNOTTE</small><strong id="balance">0,000 €</strong></div></div>
+<header>
+  <div class="logo">NOVA PLAY</div>
+  <div class="balance">CRÉDITS : <span id="balance">0.000</span></div>
 </header>
-<main id="home">
- <section class="hero"><div class="heroCopy"><div class="kicker">NOVA PLAY · ARCADE CLUB</div><h1>Play bold.<br><span>Stay in the game.</span></h1><p>Trois expériences arcade en 3D, des défis rapides et une cagnotte de crédits virtuels. Prends place et lance ton prochain défi.</p><div class="heroStats"><div class="stat">✦ <b>3 jeux 3D</b></div><div class="stat">🎮 3 défis gratuits</div><div class="stat">◈ Sans publicité</div></div></div><div class="heroVisual"><div class="orb one"></div><div class="orb two"></div><div class="heroIcon">🏆</div></div></section>
- <div class="notice"><b>Crédits virtuels :</b> le solde commence à 0,000 €. Les gains affichés sont des points de jeu sans valeur monétaire, non convertibles et non retirables. Aucun pari en argent réel n'est activé.</div>
- <div class="sectionhead"><h2>Les expériences</h2><span>Choisis ton jeu</span></div>
- <div class="games">
-  <button class="gamecard" onclick="openPage('chicken')"><div class="cover" id="coverChicken"><span class="coverTag">01 · SKILL & TIMING</span></div><div class="cardInfo"><h3>Chicken Road</h3><p>Un poulet. Une route. Des voitures. Saute au bon moment et avance le plus loin possible.</p><div class="cardFoot"><span>🐔 Réflexes</span><span class="playTag">JOUER ↗</span></div></div></button>
-  <button class="gamecard" onclick="openPage('rain')"><div class="cover" id="coverRain"><span class="coverTag">02 · 50 HIDDEN TILES</span><div style="height:100%;display:grid;place-items:center;font-size:67px;text-shadow:0 8px 20px #000">🌧️</div></div><div class="cardInfo"><h3>Rain 50</h3><p>50 cases cachées. Révèle les symboles bonus, évite les pièges et fais monter ton score.</p><div class="cardFoot"><span>💎 Découverte</span><span class="playTag">JOUER ↗</span></div></div></button>
-  <button class="gamecard" onclick="openPage('crane')"><div class="cover" id="coverCrane"><span class="coverTag">03 · PERFECT STACK</span></div><div class="cardInfo"><h3>Crane House</h3><p>La grue balance les maisons. Lâche au bon instant et construis une tour stable.</p><div class="cardFoot"><span>🏗️ Précision</span><span class="playTag">JOUER ↗</span></div></div></button>
- </div>
- <div class="sectionhead"><h2>Défis gratuits</h2><span>Chaque réussite : +0,001 crédit</span></div>
- <div class="minigames">
-  <button class="mini" onclick="openMini('reaction')"><span class="miniIcon">⚡</span><span><b>Réflexe éclair</b><small>Appuie dès que le signal passe au vert.</small></span></button>
-  <button class="mini" onclick="openMini('memory')"><span class="miniIcon">🧠</span><span><b>Mémoire flash</b><small>Retrouve les paires de symboles.</small></span></button>
-  <button class="mini" onclick="openMini('mines')"><span class="miniIcon">💣</span><span><b>Démineur express</b><small>Repère 5 cases sûres sans toucher la mine.</small></span></button>
- </div>
+
+<main>
+
+<section id="home">
+  <div class="hero">
+    <div class="eyebrow">NEXT GENERATION ARCADE</div>
+    <h1>ENTER <span>NOVA</span></h1>
+    <p>Une arcade interactive en trois dimensions.<br>
+    Des jeux, des animations et des défis.</p>
+  </div>
+
+  <h2 class="section-title">JEUX PRINCIPAUX</h2>
+
+  <div class="grid">
+    <article class="game-card" data-game="chicken">
+      <div class="game-number">01</div>
+      <span class="tag">THREE.JS 3D</span>
+      <h3>CHICKEN ROAD</h3>
+      <p>Traverse une route animée, évite les voitures et avance étape par étape.</p>
+    </article>
+
+    <article class="game-card" data-game="rain">
+      <div class="game-number">02</div>
+      <span class="tag">INTERACTIVE 3D</span>
+      <h3>RAIN 50</h3>
+      <p>Découvre les cases bonus sur un plateau 3D de cinquante cases.</p>
+    </article>
+
+    <article class="game-card" data-game="crane">
+      <div class="game-number">03</div>
+      <span class="tag">3D CONSTRUCTION</span>
+      <h3>CRANE HOUSE</h3>
+      <p>Déplace une grue animée et empile des maisons en trois dimensions.</p>
+    </article>
+  </div>
+
+  <h2 class="section-title">MINI-JEUX</h2>
+  <div class="grid">
+    <article class="mini-card">
+      <h3>REFLEX TEST</h3>
+      <p>Teste ta vitesse de réaction.</p>
+      <button id="reactionBtn">JOUER</button>
+    </article>
+    <article class="mini-card">
+      <h3>MEMORY GRID</h3>
+      <p>Reproduis une séquence de couleurs.</p>
+      <button id="memoryBtn">JOUER</button>
+    </article>
+    <article class="mini-card">
+      <h3>SAFE TILES</h3>
+      <p>Découvre les cases sûres.</p>
+      <button id="safeBtn">JOUER</button>
+    </article>
+  </div>
+
+  <div class="panel">
+    <h2 class="section-title">PROFIL ET CAGNOTTE</h2>
+    <p>Solde virtuel : <strong id="profileBalance">0.000</strong></p>
+    <label for="paypalAmount">Montant du soutien en euros</label>
+    <input id="paypalAmount" type="number" min="1" max="500" placeholder="Exemple : 5">
+    <button class="purple" id="paypalBtn">OUVRIR PAYPAL</button>
+    <p style="font-size:11px;color:var(--muted)">
+      Le soutien PayPal est indépendant des crédits virtuels.
+    </p>
+  </div>
+</section>
+
+<section id="game" class="hidden">
+  <div class="game-head">
+    <h2 id="gameTitle">NOVA GAME</h2>
+    <button class="dark" id="backBtn">RETOUR</button>
+  </div>
+
+  <div class="panel">
+    <div id="viewport"></div>
+    <div id="description"></div>
+    <div id="score"></div>
+    <div id="controls" class="controls"></div>
+    <div id="message"></div>
+    <div id="rainGrid" class="hidden"></div>
+  </div>
+</section>
+
+<section id="mini" class="panel hidden">
+  <div class="game-head">
+    <h2 id="miniTitle">MINI-JEU</h2>
+    <button class="dark" id="closeMini">FERMER</button>
+  </div>
+  <p id="miniDescription"></p>
+  <div id="miniContent"></div>
+  <div id="miniMessage"></div>
+</section>
+
 </main>
-<section class="page" id="chicken">
- <button class="back" onclick="goHome()">← Accueil</button><div class="gameTitle"><div><h2>Chicken Road</h2><p>Observe la circulation. Saute quand tu le sens.</p></div><span class="playTag">3D LIVE</span></div>
- <div class="panel"><div class="controls"><div class="field"><label>MISE EN CRÉDITS VIRTUELS</label><input id="chickenBet" type="number" min=".001" step=".001" value=".010"></div><button class="secondary" onclick="setBet('chickenBet','.010')">0,010</button><button class="secondary" onclick="setBet('chickenBet','.050')">0,050</button></div>
- <div class="bigMulti" id="chickenMulti">x1.00</div><div class="mutedCenter" id="chickenStatus">Le poulet attend au bord de la route.</div>
- <div class="stage3d" id="chickenStage"><span class="stageLabel">CROSSING ZONE · LIVE TRAFFIC</span><span class="stageRight" id="roadStep">ÉTAPE 0</span></div>
- <div class="actions"><button class="primary" id="chickenStart" onclick="startChicken()">LANCER</button><button class="primary" id="chickenJump" onclick="jumpChicken()" disabled>⬆ SAUTER</button><button class="secondary" id="chickenCollect" onclick="collectChicken()" disabled>ARRÊTER</button></div></div>
-</section>
-<section class="page" id="rain">
- <button class="back" onclick="goHome()">← Accueil</button><div class="gameTitle"><div><h2>Rain 50</h2><p>50 cases à découvrir. Chaque case révèle son secret.</p></div><span class="playTag">50 TILES</span></div>
- <div class="panel"><div class="controls"><div class="field"><label>MISE EN CRÉDITS VIRTUELS</label><input id="rainBet" type="number" min=".001" step=".001" value=".010"></div><button class="secondary" onclick="setBet('rainBet','.010')">0,010</button><button class="secondary" onclick="setBet('rainBet','.050')">0,050</button></div>
- <div class="bigMulti" id="rainMulti">x1.00</div><div class="mutedCenter" id="rainStatus">Lance la partie pour mélanger les 50 cases.</div>
- <div class="rainGrid" id="rainGrid"></div><div class="winFlash" id="rainFlash"><strong id="rainPrize">BONUS !</strong><span id="rainPrizeText">Case gagnante découverte</span></div>
- <div class="actions"><button class="primary" id="rainStart" onclick="startRain()">MÉLANGER & JOUER</button><button class="secondary" id="rainStop" onclick="stopRain()" disabled>TERMINER</button></div></div>
-</section>
-<section class="page" id="crane">
- <button class="back" onclick="goHome()">← Accueil</button><div class="gameTitle"><div><h2>Crane House</h2><p>La précision fait toute la différence.</p></div><span class="playTag">PHYSICS STACK</span></div>
- <div class="panel"><div class="controls"><div class="field"><label>MISE EN CRÉDITS VIRTUELS</label><input id="craneBet" type="number" min=".001" step=".001" value=".010"></div><button class="secondary" onclick="setBet('craneBet','.010')">0,010</button><button class="secondary" onclick="setBet('craneBet','.050')">0,050</button></div>
- <div class="mutedCenter" id="craneStatus">Le crochet se déplace au-dessus de la zone de construction.</div><div class="stage3d" id="craneStage"><span class="stageLabel">NOVA CONSTRUCTION · 8 HOUSES</span><span class="stageRight" id="craneCount">0 / 8 MAISONS</span></div>
- <div class="actions"><button class="primary" id="craneStart" onclick="startCrane()">DÉMARRER LA GRUE</button><button class="primary" id="craneDrop" onclick="dropHouse()" disabled>🟢 LÂCHER LA MAISON</button></div></div>
-</section>
-<section class="page" id="mini">
- <button class="back" onclick="goHome()">← Accueil</button><div class="gameTitle"><div><h2 id="miniTitle">Défi gratuit</h2><p id="miniDesc">Gagne 0,001 crédit virtuel.</p></div><span class="playTag">FREE PLAY</span></div>
- <div class="panel"><div class="miniStage" id="miniStage"></div><div class="actions" id="miniActions"></div></div>
-</section>
-<div class="footer"><span>✦ NOVA PLAY</span><span>Arcade sans publicité</span><span>Crédits virtuels non monétaires</span></div>
-</div>
-<div class="shade" id="profileShade" onclick="if(event.target===this)closeProfile()"><div class="modal"><button class="close" onclick="closeProfile()">✕</button><div class="kicker">NOVA PLAY · COMPTE</div><h2>Ma cagnotte</h2><p>Consulte ton solde et ton historique de crédits virtuels.</p><div class="balance" style="width:100%;margin:14px 0"><small>SOLDE ACTUEL</small><strong id="profileBalance">0,000 €</strong></div><div style="font:700 14px 'Space Grotesk';margin:15px 0 5px">Soutenir NOVA PLAY</div><p>Tu peux envoyer une contribution volontaire au compte PayPal indiqué. Cette contribution n'est pas un dépôt de jeu et ne crédite pas le solde virtuel.</p><div class="field"><label>MONTANT À ENVOYER (€)</label><input id="topupAmount" type="number" min="1" max="500" step=".01" value="5.00" oninput="previewAmount()"></div><div class="amounts"><button onclick="setAmount(5)">5 €</button><button onclick="setAmount(10)">10 €</button><button onclick="setAmount(20)">20 €</button><button onclick="setAmount(50)">50 €</button></div><button class="paypal" onclick="sendPaypal()"><small>PayPal</small> · Continuer pour <b id="amountPreview">5,00 €</b></button><div class="fineprint">PayPal s'ouvre avec le montant demandé prérempli vers paypal.me/SH0PNOVA. Vérifie le bénéficiaire et le montant sur PayPal avant de confirmer. Cette page HTML ne reçoit aucune confirmation de paiement.</div></div></div>
-<div class="toast" id="toast"></div>
 
-
+<footer>
+  NOVA PLAY — Arcade de divertissement à crédits virtuels.
+  Les crédits n'ont aucune valeur monétaire.
+</footer>
 
 <script type="module" src="./app.js"></script>
-</body></html>
+</body>
+</html>
