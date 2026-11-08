@@ -1,45 +1,1010 @@
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
 
-let credits=0;const fmt=n=>n.toFixed(3).replace('.',',')+' €';function drawBalance(){document.getElementById('balance').textContent=fmt(credits);document.getElementById('profileBalance').textContent=fmt(credits)}function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}function setBet(id,v){document.getElementById(id).value=v}function readBet(id){let v=Number(document.getElementById(id).value);if(!Number.isFinite(v)||v<.001){toast('Mise minimum : 0,001 crédit.');return null}v=Math.round(v*1000)/1000;if(v>credits){toast('Solde insuffisant. Joue aux défis gratuits pour gagner des crédits.');return null}return v}
-function openPage(id){document.getElementById('home').style.display='none';document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='rain')buildRain();if(id==='chicken'){if(!window.scenes.chicken)window.registerScene('chicken',document.getElementById('chickenStage'),window.initChickenScene);setTimeout(()=>window.resizeScene('chickenStage'),50)}if(id==='crane'){if(!window.scenes.crane)window.registerScene('crane',document.getElementById('craneStage'),window.initCraneScene);setTimeout(()=>window.resizeScene('craneStage'),50)}}function goHome(){document.getElementById('home').style.display='block';document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))}
-function openProfile(){drawBalance();document.getElementById('profileShade').classList.add('open')}function closeProfile(){document.getElementById('profileShade').classList.remove('open')}function setAmount(n){document.getElementById('topupAmount').value=n;previewAmount()}function previewAmount(){let n=Number(document.getElementById('topupAmount').value);document.getElementById('amountPreview').textContent=Number.isFinite(n)&&n>=1? n.toFixed(2).replace('.',',')+' €':'—'}function sendPaypal(){let n=Number(document.getElementById('topupAmount').value);if(!Number.isFinite(n)||n<1||n>500){toast('Montant entre 1 € et 500 €.');return}let amount=(Math.round(n*100)/100).toFixed(2).replace(/\.00$/,'');window.open('https://www.paypal.com/paypalme/SH0PNOVA/'+encodeURIComponent(amount+'EUR'),'_blank','noopener,noreferrer')}
-function award(){credits=Math.round((credits+.001)*1000)/1000;drawBalance();toast('+0,001 crédit virtuel')}
+/* =====================================
+   NOVA PLAY — MOTEUR PRINCIPAL
+===================================== */
 
+const $ = id => document.getElementById(id);
 
+let balance = Number(localStorage.getItem('novaBalance') || 0);
+let currentGame = '';
+let renderer = null;
+let scene = null;
+let camera = null;
+let clock = null;
+let animationFrame = null;
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
-const scenes={};
-function makeRenderer(el){const w=el.clientWidth||600,h=el.clientHeight||390;const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bc8d4);scene.fog=new THREE.Fog(0x9bc8d4,22,48);const camera=new THREE.PerspectiveCamera(42,w/h,.1,100);const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(w,h);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;el.appendChild(renderer.domElement);scene.add(new THREE.HemisphereLight(0xe6f7ff,0x52644b,2.1));let sun=new THREE.DirectionalLight(0xfff2d6,3.1);sun.position.set(-5,10,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);return {el,scene,camera,renderer,sun}}
-function mat(color,rough=.7,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal})}
-function box(parent,w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
-function sphere(parent,r,m,x,y,z,sx=1,sy=1,sz=1){let o=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
-function chickenModel(parent){let g=new THREE.Group();parent.add(g);let white=mat(0xf4eee0),red=mat(0xe74d3d),orange=mat(0xffa62b),black=mat(0x171c22,.3);sphere(g,.48,white,0,.68,0,1,.94,.86);sphere(g,.34,white,.24,1.05,.03,.85,1,.83);sphere(g,.14,red,.18,1.38,.04,.8,1.1,.7);sphere(g,.11,red,.36,1.34,.04,.8,1,.7);let beak=new THREE.Mesh(new THREE.ConeGeometry(.12,.28,5),orange);beak.rotation.z=-Math.PI/2;beak.position.set(.52,1.06,.08);g.add(beak);sphere(g,.045,black,.43,1.14,.29);sphere(g,.045,mat(0xffffff),.44,1.16,.32);for(let z of [-.22,.22]){let wing=sphere(g,.22,mat(0xe4dfd2),-.12,.72,z,.65,.55,.38);wing.rotation.z=-.4}for(let z of [-.16,.16]){box(g,.065,.36,.065,orange,.06,.25,z);box(g,.22,.055,.12,orange,.13,.08,z)}for(let i=0;i<3;i++){let feather=sphere(g,.13,white,-.43,.88,(i-1)*.17,.55,.55,.55);feather.rotation.z=-.6}return g}
-function carModel(parent,color){let g=new THREE.Group();parent.add(g);let body=mat(color,.35,.2),glass=mat(0x9ac7d5,.18,.2),tire=mat(0x161a1e);box(g,1.65,.42,.82,body,0,.35,0);box(g,.85,.38,.68,glass,-.05,.72,0);for(let x of [-.53,.53])for(let z of [-.44,.44]){let wh=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.12,20),tire);wh.rotation.x=Math.PI/2;wh.position.set(x,.2,z);g.add(wh)}return g}
-function initChicken(el){let s=makeRenderer(el);s.camera.position.set(0,7,13);s.camera.lookAt(0,0,0);let grass=mat(0x507d4a),road=mat(0x343b42),stripe=mat(0xf3e8bd),line=mat(0xb1c6b4);box(s.scene,40,.2,30,grass,0,-.35,0);box(s.scene,40,.18,7,road,0,-.2,0);for(let x=-18;x<20;x+=3)box(s.scene,2,.025,.12,stripe,x,-.095,0);for(let z of [-4,4]){box(s.scene,40,.15,.3,line,0,-.1,z);for(let x=-18;x<20;x+=3){let tree=new THREE.Group();s.scene.add(tree);box(tree,.22,1,.22,mat(0x60432e),x,.35,z*1.25);let crown=sphere(tree,.72,mat(0x36764e),x,1.15,z*1.25);crown.scale.set(1,1.1,1)}}s.chicken=chickenModel(s.scene);s.chicken.position.set(-5,.05,2.3);s.cars=[];for(let i=0;i<4;i++){let c=carModel([0xe94f48,0xe8b34d,0x3988bc,0xdddddf][i]);c.position.set(-9+i*5,-.05,i%2?-.9:.9);s.scene.add(c);s.cars.push(c)}s.anim=(t)=>{s.cars.forEach((c,i)=>{c.position.x=((t*.003*(i%2?1:-1)+i*5+10)%22)-11});if(s.hopUntil&&t<s.hopUntil){let p=1-(s.hopUntil-t)/260;s.chicken.position.y=.05+Math.sin(p*Math.PI)*1.7}else{s.chicken.position.y=.05}};return s}
-function initCrane(el){let s=makeRenderer(el);s.scene.background=new THREE.Color(0xa6d9ed);s.scene.fog=new THREE.Fog(0xa6d9ed,28,60);s.camera.position.set(10,9,17);s.camera.lookAt(0,4,0);let ground=mat(0x65995c),steel=mat(0xe8b94e,.35,.5),dark=mat(0x76551f),rope=mat(0x313c43),grass=mat(0x4b7d4a);box(s.scene,40,.5,25,ground,0,-.3,0);box(s.scene,1,9,.6,steel,-6,4.5,-1);box(s.scene,10,.38,.55,steel,-1,9,-1);for(let x=-5;x<4;x+=1.2){let rod=box(s.scene,.05,.15,.05,dark,x,9.35,-1);rod.rotation.z=.5}box(s.scene,2,.3,.5,dark,-5,9.35,-1);let counter=box(s.scene,1.5,.8,.8,mat(0x485c68),-6,8.3,-1);s.cable=box(s.scene,.045,3,.045,rope,2,7.4,-1);s.hook=new THREE.Group();s.scene.add(s.hook);let hookCurve=new THREE.Mesh(new THREE.TorusGeometry(.22,.045,8,18,Math.PI*1.5),dark);hookCurve.rotation.z=Math.PI; s.hook.add(hookCurve);s.hook.position.set(2,5.8,-1);s.houseGroup=new THREE.Group();s.scene.add(s.houseGroup);s.houseGroup.position.set(2,4.8,-1);s.movingHouse=buildHouse(0);s.houseGroup.add(s.movingHouse);s.stack=[];for(let i=0;i<4;i++){let b=box(s.scene,1,.1,1,mat(0x8d9c9c),-1+i*1.1,0,-1)}s.anim=(t)=>{if(s.craneMoving){let x=1.5+Math.sin(t*.0011)*4.1;s.houseGroup.position.x=x;s.hook.position.x=x;s.cable.position.x=x;s.houseGroup.rotation.z=Math.sin(t*.0011)*.05}};return s}
-function buildHouse(i){let colors=[0xf2bd62,0x7cc7e5,0xe5a0bf,0xaed28c,0xe7d17d,0x85c8b9,0xc2a0e8,0xf0a16b],roof=[0xd65c50,0xd99b42,0x7955a6,0x5b9667,0xb85d47,0x4e8294,0x8754ac,0xd74e48];let g=new THREE.Group();box(g,1.2,.78,.95,mat(colors[i%8]),0,.4,0);let r=new THREE.Mesh(new THREE.ConeGeometry(.92,.55,4),mat(roof[i%8]));r.rotation.y=Math.PI/4;r.position.y=1.04;r.castShadow=true;g.add(r);box(g,.24,.4,.05,mat(0x775038),0,.2,.49);for(let x of [-.38,.38])box(g,.2,.2,.05,mat(0x9eddea),x,.52,.49);return g}
-function resizeScene(id){let s=scenes[id];if(!s)return;let w=s.el.clientWidth,h=s.el.clientHeight;s.camera.aspect=w/h;s.camera.updateProjectionMatrix();s.renderer.setSize(w,h)}
-function registerScene(id,el,fn){if(scenes[id])return;scenes[id]=fn(el);window.addEventListener('resize',()=>resizeScene(id))}
-function animate(t){requestAnimationFrame(animate);Object.values(scenes).forEach(s=>{if(s.anim)s.anim(t);s.renderer.render(s.scene,s.camera)})}requestAnimationFrame(animate);
-function initCovers(){registerScene('coverChicken',document.getElementById('coverChicken'),initChicken);registerScene('coverCrane',document.getElementById('coverCrane'),initCrane);scenes.coverChicken.camera.position.set(0,8,15);scenes.coverChicken.camera.lookAt(0,0,0);scenes.coverCrane.camera.position.set(10,10,17);scenes.coverCrane.camera.lookAt(0,4,0)}
-initCovers();window.registerScene=registerScene;window.resizeScene=resizeScene;window.scenes=scenes;window.initChickenScene=initChicken;window.initCraneScene=initCrane;window.buildHouse=buildHouse;
+let objects = {};
+let state = {};
+let raycaster = new THREE.Raycaster();
+let pointer = new THREE.Vector2();
+let clickable = [];
+let miniTimeout = null;
 
+function updateBalance() {
+  $('balance').textContent = balance.toFixed(3);
+  $('profileBalance').textContent = balance.toFixed(3);
+  localStorage.setItem('novaBalance', String(balance));
+}
 
+function earn(value) {
+  balance += value;
+  updateBalance();
+}
 
-let chicken={active:false,bet:0,steps:0,multi:1};function startChicken(){let b=readBet('chickenBet');if(b===null)return;credits-=b;drawBalance();chicken={active:true,bet:b,steps:0,multi:1};document.getElementById('chickenMulti').textContent='x1.00';document.getElementById('chickenStatus').textContent='Le poulet est au bord de la route…';document.getElementById('chickenStart').disabled=true;document.getElementById('chickenJump').disabled=false;document.getElementById('chickenCollect').disabled=true;document.getElementById('roadStep').textContent='ÉTAPE 0';window.scenes.chicken.hopUntil=0;window.scenes.chicken.chicken.position.set(-5,.05,2.3)}
-function jumpChicken(){if(!chicken.active)return;let crash=Math.random()<Math.min(.13+chicken.steps*.045,.52);if(crash){chicken.active=false;document.getElementById('chickenStatus').textContent='Collision ! La manche est terminée.';document.getElementById('chickenMulti').textContent='GAME OVER';document.getElementById('chickenJump').disabled=true;document.getElementById('chickenCollect').disabled=true;document.getElementById('chickenStart').disabled=false;toast('Oups ! Le poulet a été touché.');return}chicken.steps++;chicken.multi=+(1+chicken.steps*.2).toFixed(2);window.scenes.chicken.hopUntil=performance.now()+260;window.scenes.chicken.chicken.position.x=Math.min(-5+chicken.steps*1.15,4);document.getElementById('chickenMulti').textContent='x'+chicken.multi.toFixed(2);document.getElementById('roadStep').textContent='ÉTAPE '+chicken.steps;document.getElementById('chickenStatus').textContent='Saut réussi ! Encore un ?';document.getElementById('chickenCollect').disabled=false}
-function collectChicken(){if(!chicken.active)return;let win=Math.round(chicken.bet*chicken.multi*1000)/1000;credits+=win;drawBalance();chicken.active=false;document.getElementById('chickenStatus').textContent='Partie terminée : +'+fmt(win)+' de crédits virtuels.';document.getElementById('chickenJump').disabled=true;document.getElementById('chickenCollect').disabled=true;document.getElementById('chickenStart').disabled=false;toast('+'+fmt(win))}
-let rain={active:false,bet:0,multi:1,opened:0,tiles:[]};function buildRain(){let g=document.getElementById('rainGrid');if(g.children.length)return;for(let i=0;i<50;i++){let b=document.createElement('button');b.className='tile';b.textContent='?';b.disabled=true;b.onclick=()=>revealTile(i);g.appendChild(b)}}function startRain(){let b=readBet('rainBet');if(b===null)return;credits-=b;drawBalance();rain={active:true,bet:b,multi:1,opened:0,tiles:Array.from({length:50},()=>Math.random()<.3?'bad':'good')};let good=0;while(rain.tiles.filter(x=>x==='good').length<9)rain.tiles[Math.floor(Math.random()*50)]='good';document.querySelectorAll('.tile').forEach(t=>{t.className='tile';t.textContent='?';t.disabled=false});document.getElementById('rainFlash').classList.remove('show');document.getElementById('rainMulti').textContent='x1.00';document.getElementById('rainStatus').textContent='Trouve les cases bonus !';document.getElementById('rainStop').disabled=false;document.getElementById('rainStart').disabled=true}
-function revealTile(i){if(!rain.active)return;let t=document.querySelectorAll('.tile')[i];if(t.textContent!=='?')return;rain.opened++;if(rain.tiles[i]==='bad'){t.classList.add('bad');t.textContent='✕';rain.active=false;document.querySelectorAll('.tile').forEach((x,j)=>{x.disabled=true;if(j!==i&&rain.tiles[j]==='good'){x.classList.add('good');x.textContent='✦'}});document.getElementById('rainStatus').textContent='Piège découvert. Partie terminée.';document.getElementById('rainMulti').textContent='OOPS';document.getElementById('rainStop').disabled=true;document.getElementById('rainStart').disabled=false;return}rain.multi=[1.2,1.5,2,2.6,3.4,4.5,6,8,12][Math.min(rain.opened-1,8)];t.classList.add('good');t.textContent='✦';document.getElementById('rainMulti').textContent='x'+rain.multi.toFixed(2);document.getElementById('rainStatus').textContent='Case bonus ! Tu peux continuer ou terminer.';if(rain.opened>=9)stopRain()}
-function stopRain(){if(!rain.active)return;let win=Math.round(rain.bet*rain.multi*1000)/1000;credits+=win;drawBalance();rain.active=false;document.querySelectorAll('.tile').forEach(t=>t.disabled=true);document.getElementById('rainPrize').textContent='+'+fmt(win);document.getElementById('rainPrizeText').textContent='Bonus virtuel · multiplicateur x'+rain.multi.toFixed(2);document.getElementById('rainFlash').classList.add('show');document.getElementById('rainStatus').textContent='Partie terminée.';document.getElementById('rainStop').disabled=true;document.getElementById('rainStart').disabled=false;toast('Bonus : +'+fmt(win))}
-let crane={active:false,bet:0,count:0};function startCrane(){let b=readBet('craneBet');if(b===null)return;credits-=b;drawBalance();crane={active:true,bet:b,count:0};let s=window.scenes.crane;s.stack.forEach(o=>s.scene.remove(o));s.stack=[];s.houseGroup.clear();s.movingHouse=buildHouse(0);s.houseGroup.add(s.movingHouse);s.houseGroup.position.set(1.5,4.8,-1);s.craneMoving=true;document.getElementById('craneCount').textContent='0 / 8 MAISONS';document.getElementById('craneStatus').textContent='Le crochet balance la maison… vise le centre !';document.getElementById('craneStart').disabled=true;document.getElementById('craneDrop').disabled=false}
-function dropHouse(){if(!crane.active)return;let s=window.scenes.crane,x=s.houseGroup.position.x,error=Math.abs(x+1);if(error>2.2){crane.active=false;s.craneMoving=false;s.houseGroup.rotation.z=1.1;s.houseGroup.position.y=1.2;document.getElementById('craneStatus').textContent='La maison tombe à côté ! Tour terminée.';document.getElementById('craneDrop').disabled=true;document.getElementById('craneStart').disabled=false;toast('Maison manquée !');return}crane.count++;s.craneMoving=false;let landed=s.movingHouse;s.houseGroup.remove(landed);landed.position.set(-1-x,crane.count*.84,0);landed.rotation.z=(x+1)*.07;s.scene.add(landed);s.stack.push(landed);document.getElementById('craneCount').textContent=crane.count+' / 8 MAISONS';document.getElementById('craneStatus').textContent=error<.65?'Alignement parfait !':'Maison posée, la tour vacille…';if(crane.count>=8){crane.active=false;let win=Math.round(crane.bet*3*1000)/1000;credits+=win;drawBalance();document.getElementById('craneStatus').textContent='🏆 Construction terminée ! +'+fmt(win)+' virtuels.';document.getElementById('craneDrop').disabled=true;document.getElementById('craneStart').disabled=false;toast('Tour terminée : +'+fmt(win));return}s.movingHouse=buildHouse(crane.count);s.houseGroup.add(s.movingHouse);s.houseGroup.position.set(1.5,4.8+crane.count*.84,-1);s.craneMoving=true}
-function openMini(type){openPage('mini');let title,desc,stage,actions='';if(type==='reaction'){title='Réflexe éclair';desc='Attends le signal vert, puis appuie le plus vite possible.';stage='<div><h3>Prêt à tester tes réflexes ?</h3><p id="reactText">Le signal peut apparaître à tout moment.</p><div class="miniBig" id="reactSignal">●</div></div>';actions='<button class="primary" id="reactBtn" onclick="startReaction()">COMMENCER</button>'}if(type==='memory'){title='Mémoire flash';desc='Retrouve les paires identiques.';stage='<div><h3>Mini memory</h3><p>Retrouve les trois paires.</p><div id="memoryGrid" style="display:grid;grid-template-columns:repeat(3,65px);gap:8px;justify-content:center;margin:14px auto"></div><p id="memoryText"></p></div>';actions='<button class="primary" onclick="startMemory()">MÉLANGER</button>'}if(type==='mines'){title='Démineur express';desc='Trouve cinq cases sûres sans tomber sur la mine.';stage='<div><h3>Repère les cases sûres</h3><p id="mineText">Une seule mine est cachée parmi neuf cases.</p><div id="mineGrid" style="display:grid;grid-template-columns:repeat(3,65px);gap:8px;justify-content:center;margin:14px auto"></div></div>';actions='<button class="primary" onclick="startMines()">NOUVELLE GRILLE</button>'}document.getElementById('miniTitle').textContent=title;document.getElementById('miniDesc').textContent=desc;document.getElementById('miniStage').innerHTML=stage;document.getElementById('miniActions').innerHTML=actions;if(type==='memory')startMemory();if(type==='mines')startMines()}
-let reactTimer=null,reactReady=false,reactStart=0;function startReaction(){let b=document.getElementById('reactBtn');b.disabled=true;reactReady=false;document.getElementById('reactSignal').style.color='#ff667b';document.getElementById('reactText').textContent='Attends le vert…';let delay=1000+Math.random()*3000;reactTimer=setTimeout(()=>{reactReady=true;reactStart=performance.now();document.getElementById('reactSignal').style.color='#49efa7';document.getElementById('reactText').textContent='MAINTENANT !';b.disabled=false;b.textContent='APPUYER';b.onclick=()=>{if(!reactReady)return;let ms=Math.round(performance.now()-reactStart);reactReady=false;document.getElementById('reactText').textContent='Temps : '+ms+' ms. Bravo !';award();b.textContent='REJOUER';b.onclick=startReaction}},delay);b.textContent='PATIENTE…'}
-let memoryVals=[],memoryPick=[],memoryDone=0;function startMemory(){let icons=['🍋','🍇','🍒','🍋','🍇','🍒'].sort(()=>Math.random()-.5);memoryVals=icons;memoryPick=[];memoryDone=0;let g=document.getElementById('memoryGrid');g.innerHTML='';icons.forEach((v,i)=>{let b=document.createElement('button');b.textContent='?';b.style.cssText='height:60px;border-radius:12px;background:#253b4d;border:1px solid #486176;font-size:25px';b.onclick=()=>{if(b.disabled||memoryPick.length>=2)return;b.textContent=v;b.disabled=true;memoryPick.push({i,b,v});if(memoryPick.length===2){if(memoryPick[0].v===memoryPick[1].v){memoryDone++;memoryPick=[];if(memoryDone===3){document.getElementById('memoryText').textContent='Toutes les paires trouvées !';award()}}else{let pair=memoryPick;setTimeout(()=>pair.forEach(x=>{x.b.textContent='?';x.b.disabled=false}),650);memoryPick=[]}}};g.appendChild(b)});document.getElementById('memoryText').textContent='Trouve les paires.'}
-let mineIndex=0,mineFound=0,mineOver=false;function startMines(){mineIndex=Math.floor(Math.random()*9);mineFound=0;mineOver=false;let g=document.getElementById('mineGrid');g.innerHTML='';for(let i=0;i<9;i++){let b=document.createElement('button');b.textContent='?';b.style.cssText='height:60px;border-radius:12px;background:#253b4d;border:1px solid #486176;font-size:22px';b.onclick=()=>{if(mineOver||b.disabled)return;b.disabled=true;if(i===mineIndex){b.textContent='💣';b.style.background='#8b3146';mineOver=true;document.getElementById('mineText').textContent='Mine ! Recommence une grille.'}else{b.textContent='✦';b.style.background='#176347';mineFound++;document.getElementById('mineText').textContent=mineFound+'/5 cases sûres';if(mineFound>=5){mineOver=true;document.getElementById('mineText').textContent='Bien joué, cinq cases sûres !';award()}}};g.appendChild(b)}document.getElementById('mineText').textContent='Évite la mine et trouve cinq cases sûres.'}
-drawBalance();
+function message(text) {
+  $('message').textContent = text;
+}
 
+function control(text, callback, style = '') {
+  const button = document.createElement('button');
+  button.textContent = text;
+  button.className = style;
+  button.addEventListener('click', callback);
+  $('controls').appendChild(button);
+}
 
-// Expose UI actions to inline HTML handlers.
-Object.assign(window, {openProfile:openProfile,closeProfile:closeProfile,setAmount:setAmount,previewAmount:previewAmount,sendPaypal:sendPaypal,openPage:openPage,goHome:goHome,setBet:setBet,startChicken:startChicken,jumpChicken:jumpChicken,collectChicken:collectChicken,startRain:startRain,stopRain:stopRain,startCrane:startCrane,dropHouse:dropHouse,openMini:openMini,startReaction:startReaction,startMemory:startMemory,startMines:startMines});
-window.scenes = scenes;
+/* =====================================
+   THREE.JS
+===================================== */
+
+function destroyScene() {
+  if (animationFrame) cancelAnimationFrame(animationFrame);
+
+  animationFrame = null;
+
+  if (renderer) {
+    renderer.dispose();
+    renderer.domElement.remove();
+  }
+
+  renderer = null;
+  scene = null;
+  camera = null;
+  objects = {};
+  clickable = [];
+}
+
+function createScene(background = 0x14263e) {
+  destroyScene();
+
+  const viewport = $('viewport');
+
+  viewport.innerHTML = '';
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(background);
+  scene.fog = new THREE.Fog(background, 20, 55);
+
+  camera = new THREE.PerspectiveCamera(
+    48,
+    viewport.clientWidth / viewport.clientHeight,
+    0.1,
+    100
+  );
+
+  camera.position.set(0, 8, 15);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: false
+  });
+
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+  renderer.setSize(
+    viewport.clientWidth,
+    viewport.clientHeight
+  );
+
+  renderer.shadowMap.enabled = true;
+
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  viewport.appendChild(renderer.domElement);
+
+  scene.add(
+    new THREE.HemisphereLight(
+      0xd4e9ff,
+      0x263247,
+      2
+    )
+  );
+
+  const light = new THREE.DirectionalLight(
+    0xffffff,
+    2.5
+  );
+
+  light.position.set(-7, 12, 8);
+  light.castShadow = true;
+
+  scene.add(light);
+
+  clock = new THREE.Clock();
+
+  renderer.domElement.addEventListener(
+    'pointerdown',
+    handleSceneClick
+  );
+
+  animate();
+}
+
+function animate() {
+  if (!renderer || !scene) return;
+
+  animationFrame = requestAnimationFrame(animate);
+
+  const t = clock.getElapsedTime();
+
+  if (currentGame === 'chicken') {
+    objects.cars?.forEach((car, i) => {
+      car.position.x = Math.sin(t * 1.1 + i * 1.8) * 4.5;
+    });
+
+    if (objects.chicken && state.jumping) {
+      objects.chicken.position.y =
+        0.55 + Math.abs(Math.sin(t * 9)) * 0.35;
+    }
+  }
+
+  if (currentGame === 'crane' && state.moving) {
+    const x = Math.sin(t * 1.1) * 3.8;
+
+    if (objects.hook) {
+      objects.hook.position.x = x;
+    }
+
+    if (objects.house) {
+      objects.house.position.x = x;
+    }
+
+    if (objects.cable) {
+      objects.cable.position.x = x;
+    }
+  }
+
+  if (currentGame === 'rain') {
+    objects.tiles?.forEach((tile, i) => {
+      if (!tile.userData.revealed) {
+        tile.position.y =
+          0.12 + Math.sin(t * 2 + i * 0.2) * 0.025;
+      }
+    });
+  }
+
+  renderer.render(scene, camera);
+}
+
+function material(color, metalness = 0, roughness = 0.65) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    metalness,
+    roughness
+  });
+}
+
+function makeBox(w, h, d, color, x, y, z) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    material(color)
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  scene.add(mesh);
+
+  return mesh;
+}
+
+function makeSphere(radius, color, x, y, z) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 24, 18),
+    material(color)
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+
+  scene.add(mesh);
+
+  return mesh;
+}
+
+function makeCylinder(radius, height, color, x, y, z) {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(
+      radius,
+      radius,
+      height,
+      20
+    ),
+    material(color, 0.2)
+  );
+
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+
+  scene.add(mesh);
+
+  return mesh;
+}
+
+function handleSceneClick(event) {
+  if (!renderer || !camera) return;
+  if (currentGame !== 'rain') return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(clickable, false);
+
+  if (!hits.length) return;
+
+  revealTile(hits[0].object);
+}
+
+/* =====================================
+   NAVIGATION
+===================================== */
+
+function openGame(name) {
+  currentGame = name;
+
+  $('home').classList.add('hidden');
+  $('mini').classList.add('hidden');
+  $('game').classList.remove('hidden');
+
+  $('controls').innerHTML = '';
+  $('message').textContent = '';
+  $('rainGrid').classList.add('hidden');
+  $('rainGrid').innerHTML = '';
+
+  if (name === 'chicken') setupChicken();
+  if (name === 'rain') setupRain();
+  if (name === 'crane') setupCrane();
+}
+
+function backHome() {
+  destroyScene();
+
+  currentGame = '';
+
+  $('game').classList.add('hidden');
+  $('mini').classList.add('hidden');
+  $('home').classList.remove('hidden');
+}
+
+document.querySelectorAll('[data-game]').forEach(card => {
+  card.addEventListener('click', () => {
+    openGame(card.dataset.game);
+  });
+});
+
+$('backBtn').addEventListener('click', backHome);
+
+/* =====================================
+   CHICKEN ROAD
+===================================== */
+
+function makeChicken() {
+  const chicken = new THREE.Group();
+
+  const body = makeSphere(
+    0.45, 0xffc83f, 0, 0, 0
+  );
+
+  body.scale.set(0.85, 1.15, 0.8);
+  chicken.add(body);
+
+  const head = makeSphere(
+    0.29, 0xffdb60, 0, 0.47, 0.05
+  );
+
+  chicken.add(head);
+
+  const eye = new THREE.Mesh(
+    new THREE.SphereGeometry(0.045, 12, 12),
+    material(0x111827)
+  );
+
+  eye.position.set(-0.12, 0.55, 0.28);
+  chicken.add(eye);
+
+  const beak = new THREE.Mesh(
+    new THREE.ConeGeometry(0.12, 0.27, 5),
+    material(0xff793e)
+  );
+
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 0.45, 0.32);
+
+  chicken.add(beak);
+
+  const crest = new THREE.Mesh(
+    new THREE.SphereGeometry(0.09, 12, 12),
+    material(0xe94f5c)
+  );
+
+  crest.position.set(0, 0.79, 0);
+  chicken.add(crest);
+
+  scene.add(chicken);
+
+  return chicken;
+}
+
+function makeCar(color) {
+  const car = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.5, 0.8),
+    material(color)
+  );
+
+  body.position.y = 0.15;
+  car.add(body);
+
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(0.75, 0.4, 0.68),
+    material(0x9bcfea)
+  );
+
+  roof.position.y = 0.55;
+  car.add(roof);
+
+  for (const x of [-0.48, 0.48]) {
+    for (const z of [-0.39, 0.39]) {
+      const wheel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.18, 0.12, 16),
+        material(0x161b26)
+      );
+
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, -0.12, z);
+
+      car.add(wheel);
+    }
+  }
+
+  scene.add(car);
+
+  return car;
+}
+
+function setupChicken() {
+  $('gameTitle').textContent = 'CHICKEN ROAD';
+
+  $('description').textContent =
+    'Traverse la route. Appuie sur avancer pour passer les voies.';
+
+  $('score').textContent = 'ÉTAPES : 0 / 6';
+
+  createScene(0x9cc9df);
+
+  camera.position.set(0, 8, 15);
+  camera.lookAt(0, 0, 0);
+
+  makeBox(16, 0.3, 18, 0x3d7950, 0, -0.35, 0);
+  makeBox(13, 0.12, 6, 0x303844, 0, -0.1, -1);
+
+  for (let x = -5; x <= 5; x += 2) {
+    makeBox(0.08, 0.03, 0.55, 0xffffff, x, -0.02, -1);
+  }
+
+  const cars = [];
+
+  const colors = [
+    0xf05262,
+    0x319ce5,
+    0xf4bd4f,
+    0x9b80ec
+  ];
+
+  for (let i = 0; i < 4; i++) {
+    const car = makeCar(colors[i]);
+
+    car.position.set(
+      -4 + i * 2.6,
+      0.25,
+      -1.5 + (i % 2) * 1.5
+    );
+
+    cars.push(car);
+  }
+
+  const chicken = makeChicken();
+
+  chicken.position.set(0, 0.5, 5);
+
+  objects = { chicken, cars };
+
+  state = {
+    step: 0,
+    alive: true,
+    jumping: false
+  };
+
+  control('AVANCER', moveChicken, 'green');
+  control('ENCAISSER', collectChicken, 'purple');
+  control('RECOMMENCER', setupChicken, 'dark');
+
+  message('Prêt. Avance pour commencer.');
+}
+
+function moveChicken() {
+  if (!state.alive) {
+    message('Partie terminée. Recommence.');
+    return;
+  }
+
+  if (state.step >= 6) {
+    message('Tu as traversé la route ! Encaisse ton score.');
+    return;
+  }
+
+  state.step++;
+
+  const chicken = objects.chicken;
+
+  chicken.position.z -= 1.2;
+
+  state.jumping = true;
+
+  setTimeout(() => {
+    state.jumping = false;
+  }, 450);
+
+  const collision = objects.cars.some(car => {
+    return (
+      Math.abs(car.position.z - chicken.position.z) < 0.8 &&
+      Math.abs(car.position.x - chicken.position.x) < 1
+    );
+  });
+
+  $('score').textContent = `ÉTAPES : ${state.step} / 6`;
+
+  if (collision) {
+    state.alive = false;
+    message('Collision ! Tu as perdu cette manche.');
+    return;
+  }
+
+  message('Bien joué. Continue ou encaisse.');
+}
+
+function collectChicken() {
+  if (!state.alive || state.step === 0) {
+    message('Aucun score à encaisser.');
+    return;
+  }
+
+  const prize = state.step * 0.001;
+
+  earn(prize);
+
+  state.alive = false;
+
+  message(`Score encaissé : ${prize.toFixed(3)} crédit virtuel.`);
+}
+
+/* =====================================
+   RAIN 50
+===================================== */
+
+function setupRain() {
+  $('gameTitle').textContent = 'RAIN 50';
+
+  $('description').textContent =
+    'Clique directement sur les cases du plateau 3D.';
+
+  $('score').textContent = 'BONUS : 0';
+
+  createScene(0x10213b);
+
+  camera.position.set(0, 9, 10);
+  camera.lookAt(0, 0, 0);
+
+  makeBox(12, 0.3, 8, 0x1b3049, 0, -0.25, 0);
+
+  const traps = new Set();
+
+  while (traps.size < 10) {
+    traps.add(Math.floor(Math.random() * 50));
+  }
+
+  const tiles = [];
+
+  for (let i = 0; i < 50; i++) {
+    const column = i % 10;
+    const row = Math.floor(i / 10);
+
+    const x = (column - 4.5) * 0.92;
+    const z = (row - 2) * 0.92;
+
+    const tile = makeBox(
+      0.82, 0.24, 0.82,
+      0x3475a2,
+      x, 0.05, z
+    );
+
+    tile.userData = {
+      index: i,
+      trap: traps.has(i),
+      revealed: false
+    };
+
+    tiles.push(tile);
+    clickable.push(tile);
+  }
+
+  objects = { tiles };
+
+  state = {
+    traps,
+    revealed: 0,
+    ended: false
+  };
+
+  control('ENCAISSER', cashRain, 'purple');
+  control('NOUVELLE PARTIE', setupRain, 'dark');
+
+  message('Dix pièges sont cachés. Trouve les cases sûres.');
+}
+
+function revealTile(tile) {
+  if (state.ended || tile.userData.revealed) return;
+
+  tile.userData.revealed = true;
+
+  if (tile.userData.trap) {
+    tile.material.color.set(0xe74464);
+    tile.scale.y = 2;
+
+    state.ended = true;
+
+    objects.tiles.forEach(t => {
+      if (t.userData.trap) {
+        t.material.color.set(0xe74464);
+      }
+    });
+
+    message('Piège découvert. Manche terminée.');
+    return;
+  }
+
+  tile.material.color.set(0x20b77b);
+  tile.scale.y = 1.7;
+
+  state.revealed++;
+
+  $('score').textContent = `BONUS : ${state.revealed}`;
+
+  message('Case sûre. Continue ou encaisse.');
+}
+
+function cashRain() {
+  if (state.ended || state.revealed === 0) {
+    message('Aucun bonus à encaisser.');
+    return;
+  }
+
+  const prize = state.revealed * 0.001;
+
+  earn(prize);
+
+  state.ended = true;
+
+  message(`Tu encaisses ${prize.toFixed(3)} crédit virtuel.`);
+}
+
+/* =====================================
+   CRANE HOUSE
+===================================== */
+
+function createHouse(color) {
+  const house = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.9, 1.25),
+    material(color)
+  );
+
+  body.castShadow = true;
+  house.add(body);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(1.05, 0.75, 4),
+    material(0xe8b85f)
+  );
+
+  roof.position.y = 0.8;
+  roof.rotation.y = Math.PI / 4;
+
+  house.add(roof);
+
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.5, 0.05),
+    material(0x392a42)
+  );
+
+  door.position.set(0, -0.2, 0.64);
+
+  house.add(door);
+
+  scene.add(house);
+
+  return house;
+}
+
+function setupCrane() {
+  $('gameTitle').textContent = 'CRANE HOUSE';
+
+  $('description').textContent =
+    'Le crochet se déplace automatiquement. Clique sur lâcher pour poser la maison.';
+
+  $('score').textContent = 'MAISONS : 0';
+
+  createScene(0x9cc9df);
+
+  camera.position.set(8, 8, 13);
+  camera.lookAt(0, 1, 0);
+
+  makeBox(14, 0.5, 10, 0x344b5d, 0, -0.45, 0);
+
+  makeBox(1.2, 2, 1.2, 0xe9a52f, -4, 1, 0);
+  makeBox(1.8, 0.3, 1.8, 0xf3c75a, -4, 2.1, 0);
+
+  makeBox(9, 0.3, 0.4, 0xe9a52f, 0, 4, 0);
+  makeBox(0.25, 2.2, 0.3, 0xe9a52f, 3.8, 3, 0);
+
+  const cable = makeCylinder(
+    0.035, 1.5, 0xdce7f4,
+    0, 3.05, 0
+  );
+
+  const hook = new THREE.Group();
+
+  const hookRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.25, 0.07, 10, 20, Math.PI * 1.5),
+    material(0xdce7f4, 0.7)
+  );
+
+  hookRing.rotation.z = Math.PI;
+
+  hook.add(hookRing);
+
+  hook.position.set(0, 2.2, 0);
+
+  scene.add(hook);
+
+  const house = createHouse(0xf16c87);
+
+  house.position.set(0, 1.25, 0);
+
+  objects = {
+    hook,
+    cable,
+    house
+  };
+
+  state = {
+    moving: true,
+    stack: 0
+  };
+
+  control('LÂCHER LA MAISON', dropHouse, 'green');
+  control('RECOMMENCER', setupCrane, 'dark');
+
+  message('Observe le crochet et lâche la maison au bon moment.');
+}
+
+function dropHouse() {
+  if (!state.moving) return;
+
+  state.moving = false;
+
+  const x = objects.hook.position.x;
+  const house = objects.house;
+
+  if (Math.abs(x) < 0.85) {
+    const y = 0.55 + state.stack * 0.95;
+
+    house.position.set(x, y, 0);
+
+    state.stack++;
+
+    earn(0.001);
+
+    $('score').textContent = `MAISONS : ${state.stack}`;
+
+    message('Maison correctement empilée. +0.001 crédit virtuel.');
+  } else {
+    house.position.set(x, 0.55, 0);
+
+    message('La maison est tombée à côté de la tour.');
+  }
+
+  const colors = [
+    0x54b9ef,
+    0x65d69b,
+    0xb28af0,
+    0xf1bd55,
+    0xe87992
+  ];
+
+  const next = createHouse(
+    colors[state.stack % colors.length]
+  );
+
+  next.position.set(0, 1.25, 0);
+
+  objects.house = next;
+
+  state.moving = true;
+}
+
+/* =====================================
+   MINI-JEUX
+===================================== */
+
+function openMini(title, description) {
+  $('home').classList.add('hidden');
+  $('game').classList.add('hidden');
+  $('mini').classList.remove('hidden');
+
+  $('miniTitle').textContent = title;
+  $('miniDescription').textContent = description;
+  $('miniContent').innerHTML = '';
+  $('miniMessage').textContent = '';
+}
+
+function startReaction() {
+  openMini(
+    'REFLEX TEST',
+    'Attends que le bouton passe au vert, puis clique.'
+  );
+
+  const button = document.createElement('button');
+
+  button.textContent = 'ATTENDS...';
+  button.className = 'red';
+
+  $('miniContent').appendChild(button);
+
+  let ready = false;
+  let finished = false;
+  let start = 0;
+
+  button.onclick = () => {
+    if (finished) return;
+
+    if (!ready) {
+      $('miniMessage').textContent = 'Trop tôt !';
+      return;
+    }
+
+    finished = true;
+
+    const time = Date.now() - start;
+
+    if (time < 900) {
+      earn(0.001);
+      $('miniMessage').textContent =
+        `${time} ms. Bravo, +0.001 crédit virtuel.`;
+    } else {
+      $('miniMessage').textContent =
+        `${time} ms. Essaie de faire mieux.`;
+    }
+
+    button.disabled = true;
+  };
+
+  miniTimeout = setTimeout(() => {
+    ready = true;
+    start = Date.now();
+
+    button.textContent = 'CLIQUE MAINTENANT';
+    button.className = 'green';
+  }, 1800 + Math.random() * 3000);
+}
+
+function startMemory() {
+  openMini(
+    'MEMORY GRID',
+    'Observe les couleurs puis reproduis la séquence.'
+  );
+
+  const colors = [
+    '#ed526c',
+    '#3fa9f5',
+    '#42d99b',
+    '#f2c14e'
+  ];
+
+  const sequence = Array.from(
+    { length: 4 },
+    () => Math.floor(Math.random() * 4)
+  );
+
+  const display = document.createElement('div');
+
+  display.style.cssText =
+    'display:flex;gap:9px;margin:20px 0';
+
+  sequence.forEach(index => {
+    const block = document.createElement('div');
+
+    block.style.cssText =
+      `width:45px;height:45px;border-radius:8px;background:${colors[index]}`;
+
+    display.appendChild(block);
+  });
+
+  $('miniContent').appendChild(display);
+
+  const controls = document.createElement('div');
+
+  controls.className = 'controls';
+
+  $('miniContent').appendChild(controls);
+
+  let answers = [];
+
+  miniTimeout = setTimeout(() => {
+    display.innerHTML = '';
+
+    $('miniMessage').textContent =
+      'À toi de reproduire la séquence.';
+  }, 2000);
+
+  colors.forEach((color, index) => {
+    const button = document.createElement('button');
+
+    button.style.background = color;
+    button.style.width = '55px';
+    button.style.height = '55px';
+
+    button.onclick = () => {
+      answers.push(index);
+
+      if (answers.length === sequence.length) {
+        const correct = answers.every(
+          (value, i) => value === sequence[i]
+        );
+
+        if (correct) {
+          earn(0.001);
+
+          $('miniMessage').textContent =
+            'Réussi ! +0.001 crédit virtuel.';
+        } else {
+          $('miniMessage').textContent =
+            'Séquence incorrecte.';
+        }
+
+        controls.querySelectorAll('button').forEach(
+          button => button.disabled = true
+        );
+      }
+    };
+
+    controls.appendChild(button);
+  });
+}
+
+function startSafeTiles() {
+  openMini(
+    'SAFE TILES',
+    'Trouve une case sûre parmi neuf cases.'
+  );
+
+  const mine = Math.floor(Math.random() * 9);
+
+  const grid = document.createElement('div');
+
+  grid.style.cssText =
+    'display:grid;grid-template-columns:repeat(3,75px);gap:8px';
+
+  $('miniContent').appendChild(grid);
+
+  let ended = false;
+
+  for (let i = 0; i < 9; i++) {
+    const button = document.createElement('button');
+
+    button.textContent = '?';
+    button.className = 'dark';
+    button.style.height = '65px';
+
+    button.onclick = () => {
+      if (ended) return;
+
+      ended = true;
+
+      if (i === mine) {
+        button.textContent = 'MINE';
+        button.className = 'red';
+
+        $('miniMessage').textContent =
+          'Mine découverte. Partie terminée.';
+      } else {
+        button.textContent = 'SAFE';
+        button.className = 'green';
+
+        earn(0.001);
+
+        $('miniMessage').textContent =
+          'Case sûre. +0.001 crédit virtuel.';
+      }
+
+      grid.querySelectorAll('button').forEach(
+        button => button.disabled = true
+      );
+    };
+
+    grid.appendChild(button);
+  }
+}
+
+$('reactionBtn').addEventListener('click', startReaction);
+$('memoryBtn').addEventListener('click', startMemory);
+$('safeBtn').addEventListener('click', startSafeTiles);
+
+$('closeMini').addEventListener('click', () => {
+  clearTimeout(miniTimeout);
+
+  $('mini').classList.add('hidden');
+  $('home').classList.remove('hidden');
+});
+
+/* =====================================
+   PAYPAL
+===================================== */
+
+$('paypalBtn').addEventListener('click', () => {
+  const amount = Number($('paypalAmount').value);
+
+  if (!Number.isFinite(amount) || amount < 1 || amount > 500) {
+    alert('Entre un montant entre 1 et 500 euros.');
+    return;
+  }
+
+  const url =
+    'https://www.paypal.com/paypalme/SH0PNOVA/' +
+    encodeURIComponent(amount.toFixed(2) + 'EUR');
+
+  window.open(url, '_blank', 'noopener');
+});
+
+/* =====================================
+   RESPONSIVE
+===================================== */
+
+window.addEventListener('resize', () => {
+  if (!renderer || !camera) return;
+
+  const viewport = $('viewport');
+
+  camera.aspect =
+    viewport.clientWidth / viewport.clientHeight;
+
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(
+    viewport.clientWidth,
+    viewport.clientHeight
+  );
+});
+
+/* DÉMARRAGE */
+updateBalance();
