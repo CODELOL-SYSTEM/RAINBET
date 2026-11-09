@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mini Jeux</title>
+<title>PEXI PLAY</title>
 <style>
 *{box-sizing:border-box;margin:0}
 body{font-family:system-ui,sans-serif;background:#10162b;color:#fff;min-height:100vh}
@@ -142,6 +142,15 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
 .wallet-form .go{font-size:15px}.wallet-message{text-align:center;min-height:20px;margin-top:10px;color:#86efac}
 .wallet-note{font-size:11px;opacity:.7;line-height:1.4;margin-top:8px}
 @media(max-width:390px){header{padding:8px;gap:5px}.brand{font-size:15px!important}.wallet-actions button{font-size:10px;padding:8px 7px}#cr{font-size:14px}}
+
+.auth-area{display:grid;gap:9px;margin:10px 0 16px;padding:12px;border:1px solid #53639b;border-radius:14px;background:#111a37}
+.auth-area button{width:100%;padding:11px;font-weight:800}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#303134;box-shadow:0 3px 0 #cbd5e1}
+.google-mark{font-size:22px;font-weight:900;font-family:Arial,sans-serif;background:conic-gradient(from -45deg,#4285f4 0 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75%);background-clip:text;-webkit-background-clip:text;color:transparent}
+.auth-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.link-btn{background:transparent!important;box-shadow:none!important;text-decoration:underline;padding:5px!important}
+.auth-identity{text-align:center;overflow-wrap:anywhere;font-size:13px;margin:4px 0}
+
 </style>
 </head>
 <body>
@@ -186,6 +195,6 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
   <section id="tower" class="scr hidden"></section>
   <section id="chicken" class="scr hidden"></section>
 </main>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
