@@ -1,245 +1,67 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NOVA PLAY | 3D Arcade</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini Jeux</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700;800&display=swap');
-
-:root {
-  --bg:#080c17;
-  --panel:#111a2b;
-  --border:#293a55;
-  --cyan:#40ddff;
-  --green:#49e8a1;
-  --purple:#a98aff;
-  --red:#ff5574;
-  --text:#f5f7ff;
-  --muted:#9baac3;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;background:var(--bg);color:var(--text);
-  font-family:Inter,Arial,sans-serif;
-}
-header{
-  height:68px;padding:0 5%;display:flex;align-items:center;
-  justify-content:space-between;position:sticky;top:0;z-index:10;
-  background:#080c17ed;border-bottom:1px solid var(--border);
-  backdrop-filter:blur(15px);
-}
-.logo{
-  font:900 22px Orbitron,sans-serif;letter-spacing:3px;
-  color:var(--cyan);text-shadow:0 0 20px #40ddff55;
-}
-.balance{
-  color:var(--green);border:1px solid #49e8a155;
-  background:#49e8a111;padding:10px 14px;border-radius:12px;
-  font-weight:800;font-size:13px;
-}
-main{max-width:1150px;margin:auto;padding:24px 16px 60px}
-.hero{
-  text-align:center;padding:45px 18px;border:1px solid #40ddff44;
-  border-radius:22px;background:radial-gradient(ellipse at top,#1b4163,#10172b 70%);
-}
-.hero h1{font:900 clamp(32px,7vw,60px) Orbitron;margin:12px 0}
-.hero h1 span{color:var(--cyan)}
-.hero p{color:var(--muted);line-height:1.7}
-.eyebrow{font:700 11px Orbitron;letter-spacing:4px;color:var(--green)}
-.section-title{font:700 18px Orbitron;margin:28px 0 15px}
-.grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:14px;
-}
-.game-card{
-  padding:22px;border:1px solid var(--border);border-radius:18px;
-  background:linear-gradient(145deg,#18263e,#101727);
-  cursor:pointer;transition:.2s;
-}
-.game-card:hover{
-  transform:translateY(-4px);border-color:var(--cyan);
-  box-shadow:0 12px 35px #40ddff16;
-}
-.game-number{font:900 36px Orbitron;color:var(--cyan)}
-.game-card h3{font:700 14px Orbitron;letter-spacing:1px}
-.game-card p{font-size:13px;line-height:1.6;color:var(--muted)}
-.tag{
-  display:inline-block;padding:5px 9px;border-radius:5px;
-  background:#40ddff18;color:var(--cyan);font-size:10px;
-  font-weight:800;letter-spacing:1px;
-}
-.panel{
-  padding:19px;border:1px solid var(--border);
-  border-radius:18px;background:var(--panel);margin-top:18px;
-}
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,sans-serif;background:#10162b;color:#fff;min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;background:#182044;position:sticky;top:0;z-index:5}
+header b{font-size:18px}
+#cr{font-weight:700;color:#facc15}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:#2b3668;color:#fff}
+button:disabled{opacity:.4;cursor:default}
 .hidden{display:none!important}
-button{
-  padding:12px 17px;border:0;border-radius:10px;
-  background:var(--cyan);color:#07111d;font-weight:800;
-  cursor:pointer;transition:.15s;
-}
-button:hover{filter:brightness(1.12);transform:translateY(-1px)}
-button:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.green{background:var(--green)}
-.purple{background:var(--purple);color:#130b25}
-.dark{background:#293a55;color:white;border:1px solid #435875}
-.red{background:var(--red);color:white}
-.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
-.game-head{
-  display:flex;justify-content:space-between;align-items:center;
-  gap:10px;flex-wrap:wrap;
-}
-.game-head h2{font:700 19px Orbitron}
-#viewport{
-  height:430px;width:100%;border-radius:14px;overflow:hidden;
-  background:#15263d;border:1px solid #354967;
-}
-#viewport canvas{width:100%;height:100%;display:block}
-#description{font-size:13px;color:var(--muted);margin-top:12px}
-#message{min-height:24px;margin-top:12px;color:var(--green);font-weight:700;font-size:13px}
-#score{font:700 13px Orbitron;color:var(--cyan);margin-top:9px}
-#rainGrid{
-  display:grid;grid-template-columns:repeat(10,minmax(0,1fr));
-  gap:5px;margin-top:15px;
-}
-.rain-tile{
-  padding:0;aspect-ratio:1;border:1px solid #536989;
-  border-radius:6px;background:#243d5c;color:white;
-  font-size:11px;
-}
-.rain-tile.safe{background:#12694e;border-color:var(--green)}
-.rain-tile.trap{background:#902b48;border-color:var(--red)}
-.mini-card{
-  background:#17243a;border:1px solid var(--border);
-  border-radius:15px;padding:17px;
-}
-.mini-card h3{font:700 13px Orbitron}
-.mini-card p{font-size:12px;color:var(--muted);line-height:1.6}
-input{
-  width:100%;padding:12px;background:#080f1c;color:white;
-  border:1px solid #40516b;border-radius:9px;margin:8px 0 12px;
-}
-label{font-size:12px;color:var(--muted)}
-#miniContent{margin-top:18px}
-#miniMessage{color:var(--green);font-weight:700;margin-top:12px}
-footer{text-align:center;padding:25px;color:#77869e;font-size:11px}
-@media(max-width:550px){
-  header{padding:0 12px;height:60px}
-  .logo{font-size:17px}
-  .balance{font-size:11px;padding:8px}
-  #viewport{height:330px}
-  #rainGrid{gap:3px}
-  .rain-tile{font-size:9px}
-}
+#menu{display:grid;gap:14px;padding:20px;max-width:560px;margin:auto}
+#menu h1{text-align:center;font-size:26px;margin:10px 0}
+.card{display:flex;align-items:center;gap:16px;padding:22px;font-size:22px;text-align:left;border-radius:16px}
+.card i{font-style:normal;font-size:44px}
+.card small{display:block;opacity:.75;font-size:13px;font-weight:400}
+.c1{background:linear-gradient(135deg,#0f766e,#164e63)}
+.c2{background:linear-gradient(135deg,#b45309,#7c2d12)}
+.c3{background:linear-gradient(135deg,#4d7c0f,#14532d)}
+.box{max-width:420px;margin:12px auto;padding:0 12px}
+.ctl{display:grid;gap:8px;margin-top:12px}
+.ctl label{display:flex;justify-content:space-between;align-items:center;gap:8px}
+input,select{padding:8px;border-radius:8px;border:0;width:130px;background:#222b52;color:#fff;font:inherit}
+.go{background:#16a34a}
+.out{background:#f59e0b;color:#111}
+.adv,.drop{background:#2563eb}
+.mult{text-align:center;font-size:30px;font-weight:700;color:#facc15}
+.msg{text-align:center;min-height:24px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.tile{aspect-ratio:1;font-size:26px;padding:0;background:#27346b}
+.tile.ok{background:#14532d}
+.tile.bad{background:#991b1b}
+.tile.dim{opacity:.55}
+.tw{position:relative;width:300px;height:400px;margin:auto;overflow:hidden;background:linear-gradient(#1e3a8a,#10162b);border-radius:12px;cursor:pointer}
+.world{position:absolute;left:0;bottom:0;width:300px;height:100%;transition:transform .3s}
+.bl{position:absolute;height:26px;background:#f59e0b;border:2px solid #fff4;border-radius:4px}
+.bl.base{background:#78716c}
+.road{position:relative;display:flex;overflow-x:auto;background:#374151;border-radius:12px;padding:8px 0}
+.ln{flex:0 0 66px;height:210px;border-left:3px dashed #fff5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:30px}
+.lm{font-size:12px;background:#0006;padding:2px 6px;border-radius:8px}
+.ln.done .lm{background:#16a34a}
 </style>
 </head>
-
 <body>
 <header>
-  <div class="logo">NOVA PLAY</div>
-  <div class="balance">CRÉDITS : <span id="balance">0.000</span></div>
+  <button id="home">☰ Menu</button>
+  <b>MINI JEUX</b>
+  <span id="cr">💰 <span id="bal">1000</span> <button id="refill" class="hidden">+1000</button></span>
 </header>
-
 <main>
-
-<section id="home">
-  <div class="hero">
-    <div class="eyebrow">NEXT GENERATION ARCADE</div>
-    <h1>ENTER <span>NOVA</span></h1>
-    <p>Une arcade interactive en trois dimensions.<br>
-    Des jeux, des animations et des défis.</p>
-  </div>
-
-  <h2 class="section-title">JEUX PRINCIPAUX</h2>
-
-  <div class="grid">
-    <article class="game-card" data-game="chicken">
-      <div class="game-number">01</div>
-      <span class="tag">THREE.JS 3D</span>
-      <h3>CHICKEN ROAD</h3>
-      <p>Traverse une route animée, évite les voitures et avance étape par étape.</p>
-    </article>
-
-    <article class="game-card" data-game="rain">
-      <div class="game-number">02</div>
-      <span class="tag">INTERACTIVE 3D</span>
-      <h3>RAIN 50</h3>
-      <p>Découvre les cases bonus sur un plateau 3D de cinquante cases.</p>
-    </article>
-
-    <article class="game-card" data-game="crane">
-      <div class="game-number">03</div>
-      <span class="tag">3D CONSTRUCTION</span>
-      <h3>CRANE HOUSE</h3>
-      <p>Déplace une grue animée et empile des maisons en trois dimensions.</p>
-    </article>
-  </div>
-
-  <h2 class="section-title">MINI-JEUX</h2>
-  <div class="grid">
-    <article class="mini-card">
-      <h3>REFLEX TEST</h3>
-      <p>Teste ta vitesse de réaction.</p>
-      <button id="reactionBtn">JOUER</button>
-    </article>
-    <article class="mini-card">
-      <h3>MEMORY GRID</h3>
-      <p>Reproduis une séquence de couleurs.</p>
-      <button id="memoryBtn">JOUER</button>
-    </article>
-    <article class="mini-card">
-      <h3>SAFE TILES</h3>
-      <p>Découvre les cases sûres.</p>
-      <button id="safeBtn">JOUER</button>
-    </article>
-  </div>
-
-  <div class="panel">
-    <h2 class="section-title">PROFIL ET CAGNOTTE</h2>
-    <p>Solde virtuel : <strong id="profileBalance">0.000</strong></p>
-    <label for="paypalAmount">Montant du soutien en euros</label>
-    <input id="paypalAmount" type="number" min="1" max="500" placeholder="Exemple : 5">
-    <button class="purple" id="paypalBtn">OUVRIR PAYPAL</button>
-    <p style="font-size:11px;color:var(--muted)">
-      Le soutien PayPal est indépendant des crédits virtuels.
-    </p>
-  </div>
-</section>
-
-<section id="game" class="hidden">
-  <div class="game-head">
-    <h2 id="gameTitle">NOVA GAME</h2>
-    <button class="dark" id="backBtn">RETOUR</button>
-  </div>
-
-  <div class="panel">
-    <div id="viewport"></div>
-    <div id="description"></div>
-    <div id="score"></div>
-    <div id="controls" class="controls"></div>
-    <div id="message"></div>
-    <div id="rainGrid" class="hidden"></div>
-  </div>
-</section>
-
-<section id="mini" class="panel hidden">
-  <div class="game-head">
-    <h2 id="miniTitle">MINI-JEU</h2>
-    <button class="dark" id="closeMini">FERMER</button>
-  </div>
-  <p id="miniDescription"></p>
-  <div id="miniContent"></div>
-  <div id="miniMessage"></div>
-</section>
-
+  <section id="menu" class="scr">
+    <h1>Choisis ton jeu</h1>
+    <button class="card c1" data-g="mines"><i>🪙</i><span>Coin Miner<small>Trouve les pièces, évite les bombes</small></span></button>
+    <button class="card c2" data-g="tower"><i>🏗️</i><span>Tower Builder<small>Empile les blocs le plus haut possible</small></span></button>
+    <button class="card c3" data-g="chicken"><i>🐔</i><span>Chicken Road<small>Fais traverser la poule sans te faire écraser</small></span></button>
+  </section>
+  <section id="mines" class="scr hidden"></section>
+  <section id="tower" class="scr hidden"></section>
+  <section id="chicken" class="scr hidden"></section>
 </main>
-
-<footer>
-  NOVA PLAY — Arcade de divertissement à crédits virtuels.
-  Les crédits n'ont aucune valeur monétaire.
-</footer>
-
-<script type="module" src="./app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
