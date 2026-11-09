@@ -126,14 +126,55 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
 @keyframes lid{to{transform:translateY(-170px) rotate(540deg);opacity:0}}
 .pg{height:10px;background:#0006;border-radius:6px;margin-bottom:8px;overflow:hidden}
 .pg b{display:block;height:100%;width:0;background:linear-gradient(90deg,#fde047,#f97316);transition:width .3s}
+
+.brand{background:transparent!important;box-shadow:none!important;padding:8px 4px!important;font-size:19px;font-weight:950;letter-spacing:1px}
+.wallet-actions{display:flex;gap:7px;align-items:center}
+.wallet-actions button{padding:9px 11px;font-size:12px;white-space:nowrap}
+.paypal-btn{background:linear-gradient(#fff,#e7eef5)!important;color:#12345a!important;box-shadow:0 4px 0 #9aa9b8!important}
+.paypal-btn svg{width:22px;height:22px;vertical-align:middle;margin-right:4px}
+.wallet-btn{background:linear-gradient(#60a5fa,#2563eb)!important}
+.wallet-modal{position:fixed;inset:0;z-index:30;background:#050816dd;display:grid;place-items:center;padding:14px}
+.wallet-panel{position:relative;width:min(100%,430px);padding:24px 18px 18px;border-radius:18px;background:#182044;border:1px solid #53639b;box-shadow:0 18px 60px #000b}
+.wallet-panel h2{text-align:center;margin:5px 0 12px}.wallet-rate{text-align:center;color:#facc15;font-weight:900;margin:8px 0 14px}
+.wallet-close{position:absolute;right:12px;top:12px;padding:6px 10px!important}
+.wallet-form{display:grid;gap:12px}.wallet-form label{display:grid;gap:6px;font-weight:700}
+.wallet-form input{width:100%;padding:12px;background:#222b52;color:white;border:1px solid #53639b}
+.wallet-form .go{font-size:15px}.wallet-message{text-align:center;min-height:20px;margin-top:10px;color:#86efac}
+.wallet-note{font-size:11px;opacity:.7;line-height:1.4;margin-top:8px}
+@media(max-width:390px){header{padding:8px;gap:5px}.brand{font-size:15px!important}.wallet-actions button{font-size:10px;padding:8px 7px}#cr{font-size:14px}}
 </style>
 </head>
 <body>
 <header>
-  <button id="home">☰ Menu</button>
-  <b>MINI JEUX</b>
-  <span id="cr">💰 <span id="bal">1000</span> <button id="refill" class="hidden">+1000</button></span>
+  <button id="home" class="brand">PEXI PLAY</button>
+  <span id="cr">💰 <span id="bal">1000</span></span>
+  <div class="wallet-actions"><button id="profileOpen" class="wallet-btn">Mon profil</button></div>
 </header>
+<div id="profileModal" class="wallet-modal hidden" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+  <div class="wallet-panel">
+    <button id="profileClose" class="wallet-close" aria-label="Fermer">✕</button>
+    <h2 id="profileTitle">Mon profil</h2>
+    <p class="wallet-rate">Gère tes crédits</p>
+    <div class="wallet-form"><button id="deposit" class="paypal-btn" type="button">Ajouter des crédits avec PayPal</button><button id="withdraw" class="wallet-btn" type="button">Retirer mes crédits</button></div>
+  </div>
+</div>
+<div id="walletModal" class="wallet-modal hidden" role="dialog" aria-modal="true" aria-labelledby="walletTitle">
+  <div class="wallet-panel">
+    <button id="walletClose" class="wallet-close" aria-label="Fermer">✕</button>
+    <h2 id="walletTitle">Retrait de crédits</h2>
+    <p class="wallet-rate">10 000 crédits = 3 €</p>
+    <form id="withdrawForm" class="wallet-form">
+      <label>Nom<input name="surname" required maxlength="60" placeholder="Votre nom"></label>
+      <label>Prénom<input name="firstname" required maxlength="60" placeholder="Votre prénom"></label>
+      <label>Adresse e-mail PayPal<input name="email" type="email" required placeholder="nom@exemple.com"></label>
+      <label>Crédits à retirer<input name="credits" type="number" min="10000" step="10000" value="10000" required></label>
+      <p id="withdrawValue" class="wallet-rate">Montant estimé : 3 €</p>
+      <button class="go" type="submit">Envoyer la demande de retrait</button>
+    </form>
+    <p id="walletMessage" class="wallet-message"></p>
+    <p class="wallet-note">La demande est enregistrée sur cet appareil et doit être vérifiée manuellement. Aucun paiement PayPal n'est déclenché automatiquement.</p>
+  </div>
+</div>
 <main>
   <section id="menu" class="scr">
     <h1>Choisis ton jeu</h1>
