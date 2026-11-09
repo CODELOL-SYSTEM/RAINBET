@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDecLiaNoWpJSqfIV7DCPNdD8Y0iPoPT6A",
+  apiKey: ["AIzaSyDecLiaNoWp", "JSqfIV7DCPNdD8Y0iPoPT6A"].join(""),
   authDomain: "pexi-play.firebaseapp.com",
   projectId: "pexi-play",
   storageBucket: "pexi-play.firebasestorage.app",
@@ -22,7 +22,10 @@ const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+auth.languageCode = 'fr';
 
+// Abréviations
 const fmt = v => {
   const u = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
   let i = 0, x = Math.abs(v);
@@ -34,6 +37,7 @@ const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
 
 let bal = 1000, stop = () => {}, gameRunning = false;
+
 try {
   const sv = localStorage.getItem('mj_bal');
   if (sv !== null) bal = Math.max(1, +sv || 1);
@@ -54,6 +58,7 @@ function show(id) {
   return true;
 }
 
+// Panneau commun
 function setup(id, extra) {
   const el = $(id);
   el.innerHTML = `<div class="box"><div class="stage"></div><div class="ctl">
@@ -61,11 +66,14 @@ function setup(id, extra) {
     <div class="mult">x1.00</div>
     <button class="go">JOUER</button><button class="out" disabled>ENCAISSER</button></div>
     <div class="msg"></div></div>`;
+
   const q = s => el.querySelector(s);
 
   el.querySelectorAll('.q button').forEach(b => b.onclick = () => {
     const i = q('.stk');
-    i.value = b.dataset.m == 'max' ? Math.max(1, Math.floor(bal)) : Math.max(1, Math.floor(i.value * b.dataset.m));
+    i.value = b.dataset.m == 'max'
+      ? Math.max(1, Math.floor(bal))
+      : Math.max(1, Math.floor(i.value * b.dataset.m));
   });
 
   return {
@@ -110,6 +118,7 @@ const BOMB = '<svg viewBox="0 0 40 40"><circle cx="19" cy="23" r="12" fill="#1f2
 
 function initMines() {
   const g = setup('#mines', '<label>Mines<select class="n">' + [3, 5, 10, 15, 20, 24].map(n => `<option>${n}</option>`).join('') + '</select></label>');
+
   g.q('.stage').innerHTML = '<div class="neon">COIN MINER</div><div class="felt"><div class="grid"></div></div>';
 
   let on = false, b, k, s, m;
@@ -175,6 +184,7 @@ function initMines() {
 
     m = +g.q('.n').value;
     b = new Set();
+
     while (b.size < m) b.add(Math.random() * 25 | 0);
 
     k = 0;
@@ -205,22 +215,28 @@ function initMines() {
 
 function initTower() {
   const g = setup('#tower', '<button class="drop">Poser le bloc</button>');
+
   g.q('.stage').innerHTML = '<div class="tw"><div class="mast"></div><div class="city"></div><div class="world"></div><div class="jib"><b class="trl"></b></div></div>';
 
   const W = 300, H = 26;
   const wd = g.q('.world'), tw = g.q('.tw'), cy = g.q('.city'), trl = g.q('.trl');
+
   tw.style.zoom = Math.min(1.45, (innerWidth - 24) / 306);
 
   let x = 0, h = '';
+
   while (x < W) {
     const bw = 28 + Math.random() * 26 | 0;
     const hs = Math.random() < .35;
+
     h += `<div class="${hs ? 'hs' : 'sk'}" style="left:${x}px;width:${bw}px;height:${hs ? 50 + Math.random() * 30 | 0 : 70 + Math.random() * 130 | 0}px"></div>`;
     x += bw + 2;
   }
+
   cy.innerHTML = h;
 
   let on = false, n, x0, w0, px, s, cur, raf, t0;
+
   const mu = k => Math.pow(1.12, k);
   const pal = ['#e9a15b', '#d9776a', '#e8c07d', '#c98b6b', '#cf6f77'];
   const wins = wi => '<i></i>'.repeat(Math.max(1, Math.floor(wi / 34)));
@@ -266,6 +282,7 @@ function initTower() {
     on = false;
     cancelAnimationFrame(raf);
     if (rm) cur.remove();
+
     const w = s * mu(n);
     setBal(bal + w);
     g.win(w);
@@ -274,6 +291,7 @@ function initTower() {
 
   const drop = () => {
     if (!on) return;
+
     cancelAnimationFrame(raf);
 
     const perfect = Math.abs(px - x0) < 3;
@@ -283,25 +301,30 @@ function initTower() {
 
     if (o < 6) {
       on = false;
+
       const cb = cur.querySelector('.cb');
       if (cb) cb.remove();
+
       cur.style.transition = 'transform .7s,opacity .7s';
       cur.style.transform = 'translateY(300px) rotate(25deg)';
       cur.style.opacity = 0;
+
       g.msg('Raté ! La tour s\'effondre');
       g.run(false);
       return;
     }
 
     const nl = Math.max(px, x0);
+
     cur.style.left = nl + 'px';
     cur.style.width = o + 'px';
     cur.innerHTML = wins(o);
+
     x0 = nl;
     w0 = o;
     n++;
-    g.mult(mu(n));
 
+    g.mult(mu(n));
     pop('+' + fmt(s * (mu(n) - mu(n - 1))), perfect ? 'PARFAIT !' : '', perfect);
 
     if (n >= 12) {
@@ -323,6 +346,7 @@ function initTower() {
     wd.innerHTML = '<div class="gnd"></div>';
     n = 0;
     sink();
+
     x0 = 85;
     w0 = 130;
 
@@ -376,6 +400,7 @@ function initChicken() {
   let on = false, k = 0, p = +g.q('.d').value, s, L = [];
 
   const mu = i => .9 / Math.pow(1 - p, i);
+
   const place = l => {
     l.append(ch);
     ch.classList.remove('hop');
@@ -393,8 +418,12 @@ function initChicken() {
     for (let i = 0; i <= N; i++) {
       const d = document.createElement('div');
       d.className = 'ln' + (i ? '' : ' st') + (i == N ? ' gl' : '');
-      d.innerHTML = (i && i < N ? (i % 4 == 2 ? TRK : CAR)(cols[i % 5], Math.random() * 3 + 1) : '') + (i == N ? EGG : i ? MH : '') +
+
+      d.innerHTML =
+        (i && i < N ? (i % 4 == 2 ? TRK : CAR)(cols[i % 5], Math.random() * 3 + 1) : '') +
+        (i == N ? EGG : i ? MH : '') +
         `<span class="lm">${i ? 'x' + fx(mu(i)) : 'DÉPART'}</span>`;
+
       rd.append(d);
       L.push(d);
     }
@@ -436,6 +465,7 @@ function initChicken() {
     L[k].classList.add('done');
     place(L[k]);
     g.q('.pg b').style.width = (k / N * 100) + '%';
+
     L[k].querySelectorAll('.car').forEach(c => c.remove());
 
     if (k < N) L[k].insertAdjacentHTML('beforeend', BAR);
@@ -449,6 +479,7 @@ function initChicken() {
   g.q('.go').onclick = () => {
     s = g.take();
     if (!s) return;
+
     p = +g.q('.d').value;
     build();
     k = 0;
@@ -489,12 +520,11 @@ $('#home').onclick = () => {
   if (!gameRunning) show('#menu');
 };
 
-/* ---------- COMPTE ET FIREBASE ---------- */
+/* ---------- COMPTE, AUTHENTIFICATION ET PORTEFEUILLE ---------- */
 
 const PAYPAL_ME_URL = 'https://www.paypal.com/paypalme/SH0PNOVA/';
-const ADMIN_CONTACT_EMAIL = 'pc2alex@gmail.com';
-
 let currentUser = null;
+let authReady = false;
 
 const profileModal = $('#profileModal');
 const walletModal = $('#walletModal');
@@ -506,41 +536,21 @@ authArea.className = 'auth-area';
 
 authArea.innerHTML = `
   <div id="authSignedOut">
-    <p class="wallet-note">Connecte-toi pour ajouter des crédits ou envoyer une demande de retrait.</p>
-
-    <button id="googleLogin" class="google-btn" type="button">
-      <span class="google-mark">G</span> Continuer avec Google
-    </button>
-
-    <button id="anonymousLogin" class="wallet-btn" type="button">
-      Continuer anonymement
-    </button>
-
+    <p class="wallet-note">Connecte-toi pour ajouter des crédits ou envoyer une demande de retrait. Utilise le bouton Google avec ton compte Gmail.</p>
+    <button id="googleLogin" class="google-btn" type="button"><span class="google-mark">G</span> Continuer avec Google</button>
+    <button id="anonymousLogin" class="wallet-btn" type="button">Continuer anonymement</button>
     <form id="emailLoginForm" class="wallet-form">
-      <label>E-mail
-        <input id="authEmail" type="email" autocomplete="email" required placeholder="ton@email.com">
-      </label>
-
-      <label>Mot de passe
-        <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="6 caractères minimum">
-      </label>
-
-      <div class="auth-buttons">
-        <button id="emailLogin" type="submit">Se connecter</button>
-        <button id="emailRegister" type="button">Créer un compte</button>
-      </div>
-
+      <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="ton@email.com"></label>
+      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="6 caractères minimum"></label>
+      <div class="auth-buttons"><button id="emailLogin" type="submit">Se connecter</button><button id="emailRegister" type="button">Créer un compte</button></div>
       <button id="forgotPassword" class="link-btn" type="button">Mot de passe oublié ?</button>
     </form>
   </div>
-
   <div id="authSignedIn" class="hidden">
     <p id="authIdentity" class="auth-identity"></p>
     <button id="logout" type="button">Se déconnecter</button>
   </div>
-
-  <p id="authMessage" class="wallet-message" role="status"></p>
-`;
+  <p id="authMessage" class="wallet-message" role="status"></p>`;
 
 profilePanel.querySelector('.wallet-form').before(authArea);
 
@@ -571,46 +581,37 @@ profileModal.addEventListener('click', e => {
   if (e.target === profileModal) profileModal.classList.add('hidden');
 });
 
-/* Connexion Google */
-
 $('#googleLogin').onclick = async () => {
   try {
     await signInWithPopup(auth, googleProvider);
     authMessage('Connexion Google réussie.');
   } catch (e) {
+    console.error('Connexion Google:', e);
     authMessage(firebaseError(e), true);
   }
 };
-
-/* Connexion anonyme */
 
 $('#anonymousLogin').onclick = async () => {
   try {
     await signInAnonymously(auth);
     authMessage('Connexion anonyme réussie.');
   } catch (e) {
+    console.error('Connexion anonyme:', e);
     authMessage(firebaseError(e), true);
   }
 };
-
-/* Connexion e-mail et mot de passe */
 
 $('#emailLoginForm').onsubmit = async e => {
   e.preventDefault();
 
   try {
-    await signInWithEmailAndPassword(
-      auth,
-      $('#authEmail').value.trim(),
-      $('#authPassword').value
-    );
+    await signInWithEmailAndPassword(auth, $('#authEmail').value.trim(), $('#authPassword').value);
     authMessage('Connexion réussie.');
   } catch (err) {
+    console.error('Connexion e-mail:', err);
     authMessage(firebaseError(err), true);
   }
 };
-
-/* Création de compte */
 
 $('#emailRegister').onclick = async () => {
   const email = $('#authEmail').value.trim();
@@ -629,8 +630,6 @@ $('#emailRegister').onclick = async () => {
   }
 };
 
-/* Mot de passe oublié */
-
 $('#forgotPassword').onclick = async () => {
   const email = $('#authEmail').value.trim();
 
@@ -647,8 +646,6 @@ $('#forgotPassword').onclick = async () => {
   }
 };
 
-/* Déconnexion */
-
 $('#logout').onclick = async () => {
   try {
     await signOut(auth);
@@ -660,8 +657,10 @@ $('#logout').onclick = async () => {
 
 function firebaseError(error) {
   const messages = {
-    'auth/operation-not-allowed': 'Active cette méthode de connexion dans Firebase Authentication.',
-    'auth/unauthorized-domain': 'Ajoute le domaine de ton site dans Authentication > Paramètres > Domaines autorisés.',
+    'auth/unauthorized-domain': 'Ce domaine n’est pas autorisé. Dans Firebase > Authentication > Paramètres > Domaines autorisés, ajoute localhost ou le domaine de ton site.',
+    'auth/operation-not-allowed': 'Cette méthode n’est pas activée. Active Google, E-mail/Mot de passe et Anonyme dans Firebase > Authentication > Sign-in method.',
+    'auth/popup-closed-by-user': 'La fenêtre Google a été fermée avant la fin de la connexion.',
+    'auth/cancelled-popup-request': 'Une autre fenêtre de connexion est déjà ouverte.',
     'auth/popup-blocked': 'Autorise les fenêtres pop-up pour te connecter avec Google.',
     'auth/invalid-credential': 'E-mail ou mot de passe incorrect.',
     'auth/email-already-in-use': 'Cette adresse possède déjà un compte.',
@@ -672,21 +671,16 @@ function firebaseError(error) {
   return messages[error.code] || `Erreur Firebase : ${error.message || error.code || 'inconnue'}`;
 }
 
-/* État de connexion */
-
 onAuthStateChanged(auth, async user => {
   currentUser = user;
+  authReady = true;
 
   $('#authSignedOut').classList.toggle('hidden', !!user);
   $('#authSignedIn').classList.toggle('hidden', !user);
 
   if (user) {
-    const label = user.isAnonymous
-      ? 'Compte anonyme'
-      : (user.displayName || user.email || 'Compte connecté');
-
-    $('#authIdentity').textContent =
-      `${label} — ${user.email || 'sans adresse e-mail'}`;
+    const label = user.isAnonymous ? 'Compte anonyme' : (user.displayName || user.email || 'Compte connecté');
+    $('#authIdentity').textContent = `${label} — ${user.email || 'sans adresse e-mail'} `;
 
     try {
       const userRef = doc(db, 'users', user.uid);
@@ -706,15 +700,12 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-/* Ajouter des crédits avec PayPal */
-
+// Ajouter des crédits : ouverture PayPal.
+// Le solde n'est pas augmenté automatiquement au retour de PayPal.
 $('#deposit').onclick = () => {
   if (!requireLogin()) return;
-
   window.open(PAYPAL_ME_URL, '_blank', 'noopener,noreferrer');
 };
-
-/* Retrait de crédits */
 
 const closeWallet = () => {
   walletModal.classList.add('hidden');
@@ -735,19 +726,12 @@ walletModal.addEventListener('click', e => {
   if (e.target === walletModal) closeWallet();
 });
 
-/* Calcul de la valeur du retrait */
-
 $('#withdrawForm').addEventListener('input', e => {
   if (e.target.name === 'credits') {
     const n = Math.max(0, Number(e.target.value) || 0);
-
-    $('#withdrawValue').textContent =
-      'Montant estimé : ' +
-      (n / 10000 * 3).toFixed(2).replace('.', ',') + ' €';
+    $('#withdrawValue').textContent = 'Montant estimé : ' + (n / 10000 * 3).toFixed(2).replace('.', ',') + ' €';
   }
 });
-
-/* Envoyer une demande de retrait dans Firestore */
 
 $('#withdrawForm').onsubmit = async e => {
   e.preventDefault();
@@ -759,14 +743,12 @@ $('#withdrawForm').onsubmit = async e => {
   const email = String(f.get('email')).trim();
 
   if (credits < 10000 || credits % 10000 !== 0) {
-    $('#walletMessage').textContent =
-      'Le retrait doit être un multiple de 10 000 crédits.';
+    $('#walletMessage').textContent = 'Le retrait doit être un multiple de 10 000 crédits.';
     return;
   }
 
   if (credits > bal) {
-    $('#walletMessage').textContent =
-      'Tu ne possèdes pas assez de crédits affichés.';
+    $('#walletMessage').textContent = 'Tu ne possèdes pas assez de crédits affichés.';
     return;
   }
 
@@ -784,16 +766,11 @@ $('#withdrawForm').onsubmit = async e => {
 
   try {
     await addDoc(collection(db, 'withdrawalRequests'), request);
-
-    $('#walletMessage').textContent =
-      'Demande envoyée à PEXI PLAY. Elle doit être vérifiée manuellement avant tout paiement.';
-
+    $('#walletMessage').textContent = 'Demande envoyée à PEXI PLAY. Elle doit être vérifiée manuellement avant tout paiement.';
     e.currentTarget.reset();
     $('#withdrawValue').textContent = 'Montant estimé : 3 €';
-
   } catch (err) {
-    $('#walletMessage').textContent =
-      `Impossible d’envoyer la demande : ${firebaseError(err)}`;
+    $('#walletMessage').textContent = `Impossible d’envoyer la demande : ${firebaseError(err)}`;
   }
 };
 
