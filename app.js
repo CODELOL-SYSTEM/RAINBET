@@ -8,22 +8,23 @@ const fmt = v => {
 };
 const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
-let bal = 1000, stop = () => {};
-try { bal = +localStorage.getItem('mj_bal') || 1000; } catch (e) {}
+let bal = 1000, stop = () => {}, gameRunning = false;
+try { const sv = localStorage.getItem('mj_bal'); if (sv !== null) bal = Math.max(1, +sv || 1); } catch (e) {}
 
 function setBal(v) {
-  bal = Math.round(v * 100) / 100;
+  bal = Math.max(1, Math.round(v * 100) / 100);
   $('#bal').textContent = fmt(bal);
   try { localStorage.setItem('mj_bal', bal); } catch (e) {}
-  $('#refill').classList.toggle('hidden', bal >= 1);
 }
 function show(id) {
+  if (gameRunning) return false;
   stop(); stop = () => {};
   document.querySelectorAll('.scr').forEach(s => s.classList.add('hidden'));
   $(id).classList.remove('hidden');
+  return true;
 }
 
-// Panneau commun : crédits en jeu, multiplicateur, boutons Jouer / Encaisser
+// Panneau commun
 function setup(id, extra) {
   const el = $(id);
   el.innerHTML = `<div class="box"><div class="stage"></div><div class="ctl">
@@ -47,6 +48,8 @@ function setup(id, extra) {
       q('.stage').append(d); setTimeout(() => d.remove(), 2000);
     },
     run: v => {
+      gameRunning = v;
+      $('#home').disabled = v;
       el.querySelectorAll('.ctl input,.ctl select,.q button').forEach(x => x.disabled = v);
       q('.go').disabled = v; q('.out').disabled = !v;
     },
@@ -206,7 +209,6 @@ function initChicken() {
       g.msg('Grillée par les flammes ! Perdu'); adv.disabled = true; g.run(false); return;
     }
     k++; L[k].classList.add('done'); place(L[k]); g.q('.pg b').style.width = (k / N * 100) + '%';
-    // la barrière se pose : plus aucune voiture sur la voie franchie
     L[k].querySelectorAll('.car').forEach(c => c.remove());
     if (k < N) L[k].insertAdjacentHTML('beforeend', BAR);
     g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 170, behavior: 'smooth' });
@@ -226,7 +228,89 @@ const games = { mines: initMines, tower: initTower, chicken: initChicken };
 document.querySelectorAll('.card').forEach(c => c.onclick = () => {
   show('#' + c.dataset.g); games[c.dataset.g]();
 });
-$('#home').onclick = () => show('#menu');
-$('#refill').onclick = () => setBal(1000);
+$('#home').onclick = () => { if (!gameRunning) show('#menu'); };
+
+// Profil : ajout de crédits avec PayPal et demande de retrait
+const PAYPAL_ME_URL = ''; // Mets ici ton lien PayPal.Me ou ta page de paiement.
+const profileModal = $('#profileModal');
+$('#profileOpen').onclick = () => { if (!gameRunning) profileModal.classList.remove('hidden'); };
+$('#profileClose').onclick = () => profileModal.classList.add('hidden');
+profileModal.addEventListener('click', e => {
+  if (e.target === profileModal) profileModal.classList.add('hidden');
+});
+
+// Ajouter des crédits avec PayPal
+$('#deposit').onclick = () => {
+  if (PAYPAL_ME_URL) {
+    window.open(PAYPAL_ME_URL, '_blank', 'noopener,noreferrer');
+  } else {
+    alert('Le lien PayPal doit être configuré par le propriétaire du site.');
+  }
+};
+
+// Retirer des crédits
+const walletModal = $('#walletModal');
+const closeWallet = () => {
+  walletModal.classList.add('hidden');
+  $('#walletMessage').textContent = '';
+};
+$('#withdraw').onclick = () => {
+  if (!gameRunning) {
+    profileModal.classList.add('hidden');
+    walletModal.classList.remove('hidden');
+    $('#walletTitle').textContent = 'Retrait de crédits';
+  }
+};
+$('#walletClose').onclick = closeWallet;
+walletModal.addEventListener('click', e => {
+  if (e.target === walletModal) closeWallet();
+});
+
+$('#withdrawForm').addEventListener('input', e => {
+  if (e.target.name === 'credits') {
+    const n = Math.max(0, Number(e.target.value) || 0);
+    $('#withdrawValue').textContent =
+      'Montant estimé : ' + (n / 10000 * 3).toFixed(2).replace('.', ',') + ' €';
+  }
+});
+
+$('#withdrawForm').onsubmit = e => {
+  e.preventDefault();
+  const f = new FormData(e.currentTarget);
+  const credits = Math.floor(Number(f.get('credits')));
+  const email = String(f.get('email')).trim();
+
+  if (credits < 10000 || credits % 10000 !== 0) {
+    $('#walletMessage').textContent = 'Le retrait doit être un multiple de 10 000 crédits.';
+    return;
+  }
+  if (credits > bal) {
+    $('#walletMessage').textContent = 'Tu ne possèdes pas assez de crédits.';
+    return;
+  }
+
+  const request = {
+    nom: String(f.get('surname')).trim(),
+    prenom: String(f.get('firstname')).trim(),
+    email,
+    credits,
+    euros: credits / 10000 * 3,
+    date: new Date().toISOString(),
+    statut: 'En attente de vérification'
+  };
+
+  try {
+    const requests = JSON.parse(localStorage.getItem('mj_withdrawals') || '[]');
+    requests.push(request);
+    localStorage.setItem('mj_withdrawals', JSON.stringify(requests));
+    $('#walletMessage').textContent =
+      'Demande enregistrée sur cet appareil. Elle reste à vérifier manuellement.';
+    e.currentTarget.reset();
+    $('#withdrawValue').textContent = 'Montant estimé : 3 €';
+  } catch (err) {
+    $('#walletMessage').textContent = 'Impossible d’enregistrer la demande sur cet appareil.';
+  }
+};
+
 setBal(bal);
 show('#menu');
