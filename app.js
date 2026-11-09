@@ -1,15 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  sendPasswordResetEmail, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup,
+  onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, updateDoc,
+  collection, addDoc, query, where, orderBy, onSnapshot,
+  getDocs, serverTimestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
+/* FIREBASE */
 const firebaseConfig = {
-  apiKey: ["AIzaSyDecLiaNoWp", "JSqfIV7DCPNdD8Y0iPoPT6A"].join(""),
+  apiKey: "AIzaSyDecLiaNoWpJSqfIV7DCPNdD8Y0iPoPT6A",
   authDomain: "pexi-play.firebaseapp.com",
   projectId: "pexi-play",
   storageBucket: "pexi-play.firebasestorage.app",
@@ -18,761 +20,556 @@ const firebaseConfig = {
   measurementId: "G-JFNB7XSXPL"
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
-auth.languageCode = 'fr';
+const ADMIN_EMAIL = "pc2alex.les@gmail.com";
+const STARTING_CREDITS = 1000;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-// Abréviations
-const fmt = v => {
-  const u = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
-  let i = 0, x = Math.abs(v);
-  while (x >= 999.995 && i < u.length - 1) { x /= 1000; i++; }
-  const t = i ? (x < 10 ? x.toFixed(2) : x < 100 ? x.toFixed(1) : x.toFixed(0)) : x.toFixed(2);
-  return (v < 0 ? '-' : '') + (+t) + u[i];
-};
-const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
+let user = null;
+let profile = null;
+let activeGame = null;
+let game = {};
+let stopNotifications = null;
+let stopRequests = null;
+let stopUserNotifications = null;
+
 const $ = s => document.querySelector(s);
+const money = n => (Number(n) || 0).toLocaleString("fr-FR");
+const euros = n => (Number(n) || 0).toLocaleString("fr-FR", {
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+}) + " €";
 
-let bal = 1000, stop = () => {}, gameRunning = false;
-
-try {
-  const sv = localStorage.getItem('mj_bal');
-  if (sv !== null) bal = Math.max(1, +sv || 1);
-} catch (e) {}
-
-function setBal(v) {
-  bal = Math.max(1, Math.round(v * 100) / 100);
-  $('#bal').textContent = fmt(bal);
-  try { localStorage.setItem('mj_bal', bal); } catch (e) {}
-}
-
-function show(id) {
-  if (gameRunning) return false;
-  stop();
-  stop = () => {};
-  document.querySelectorAll('.scr').forEach(s => s.classList.add('hidden'));
-  $(id).classList.remove('hidden');
-  return true;
-}
-
-// Panneau commun
-function setup(id, extra) {
+function showMessage(id, message) {
   const el = $(id);
-  el.innerHTML = `<div class="box"><div class="stage"></div><div class="ctl">
-    <label>Crédits en jeu<span class="bet"><input class="stk" type="number" value="10" min="1"><span class="q"><button data-m=".5">½</button><button data-m="2">×2</button><button data-m="max">MAX</button></span></span></label>${extra}
-    <div class="mult">x1.00</div>
-    <button class="go">JOUER</button><button class="out" disabled>ENCAISSER</button></div>
-    <div class="msg"></div></div>`;
-
-  const q = s => el.querySelector(s);
-
-  el.querySelectorAll('.q button').forEach(b => b.onclick = () => {
-    const i = q('.stk');
-    i.value = b.dataset.m == 'max'
-      ? Math.max(1, Math.floor(bal))
-      : Math.max(1, Math.floor(i.value * b.dataset.m));
-  });
-
-  return {
-    q,
-    msg: t => q('.msg').textContent = t,
-    mult: m => q('.mult').textContent = 'x' + fx(m),
-    win: w => {
-      q('.msg').textContent = 'Gagné : +' + fmt(w) + ' crédits';
-      const d = document.createElement('div');
-      d.className = 'wb';
-      d.innerHTML = `<b>+${fmt(w)}</b><small>GAGNÉ !</small>`;
-      q('.stage').append(d);
-      setTimeout(() => d.remove(), 2000);
-    },
-    run: v => {
-      gameRunning = v;
-      $('#home').disabled = v;
-      el.querySelectorAll('.ctl input,.ctl select,.q button').forEach(x => x.disabled = v);
-      q('.go').disabled = v;
-      q('.out').disabled = !v;
-    },
-    take: () => {
-      const s = Math.floor(+q('.stk').value);
-      if (!(s >= 1) || s > bal) {
-        q('.msg').textContent = 'Crédits insuffisants';
-        return 0;
-      }
-      setBal(bal - s);
-      q('.msg').textContent = '';
-      return s;
-    }
-  };
+  if (el) el.textContent = message;
 }
 
-/* ---------- COIN MINER ---------- */
-
-const COIN = '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#facc15" stroke="#a16207" stroke-width="3"/><circle cx="20" cy="20" r="11" fill="none" stroke="#ca8a04" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="800" fill="#a16207">$</text></svg>';
-
-const GEM = '<svg viewBox="0 0 40 40"><path d="M8 15L14 7H26L32 15L20 34Z" fill="#38bdf8" stroke="#0369a1" stroke-width="2"/><path d="M8 15H32M14 7L20 15L26 7M20 15V34" stroke="#bae6fd" stroke-width="1.5" fill="none"/></svg>';
-
-const BOMB = '<svg viewBox="0 0 40 40"><circle cx="19" cy="23" r="12" fill="#1f2937"/><path d="M26 13L31 8" stroke="#a16207" stroke-width="3"/><circle cx="32" cy="7" r="3" fill="#f97316"/><circle cx="15" cy="19" r="3" fill="#fff6"/></svg>';
-
-function initMines() {
-  const g = setup('#mines', '<label>Mines<select class="n">' + [3, 5, 10, 15, 20, 24].map(n => `<option>${n}</option>`).join('') + '</select></label>');
-
-  g.q('.stage').innerHTML = '<div class="neon">COIN MINER</div><div class="felt"><div class="grid"></div></div>';
-
-  let on = false, b, k, s, m;
-
-  const T = [...Array(25)].map((_, i) => {
-    const c = document.createElement('button');
-    c.className = 'tile';
-    c.disabled = true;
-    c.onclick = () => pick(i);
-    g.q('.grid').append(c);
-    return c;
+function page(name) {
+  ["auth","home","game-area","profile","withdraw-section","admin"].forEach(id => {
+    $("#" + id).classList.toggle("hidden", id !== name);
   });
+}
 
-  const mu = n => {
-    let r = .9;
-    for (let i = 0; i < n; i++) r *= (25 - i) / (25 - m - i);
-    return r;
-  };
+function renderBalance() {
+  $("#balance").textContent = money(profile?.credits || 0);
+  $("#profile-balance").textContent = money(profile?.credits || 0);
+}
 
-  const reveal = () => T.forEach((c, i) => {
-    if (!c.classList.contains('ok') && !c.classList.contains('bad')) {
-      c.innerHTML = b.has(i) ? BOMB : GEM;
-      c.classList.add('dim');
-    }
-    c.disabled = true;
-  });
+function userRef(uid = user.uid) {
+  return doc(db, "users", uid);
+}
 
-  const cash = () => {
-    on = false;
-    const w = s * mu(k);
-    setBal(bal + w);
-    g.win(w);
-    reveal();
-    g.run(false);
-  };
+async function loadProfile(firebaseUser) {
+  const ref = userRef(firebaseUser.uid);
+  const snap = await getDoc(ref);
 
-  function pick(i) {
-    if (!on) return;
-    const c = T[i];
+  if (!snap.exists()) {
+    profile = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || "",
+      displayName: firebaseUser.displayName || "",
+      credits: STARTING_CREDITS
+    };
+    await setDoc(ref, { ...profile, createdAt: serverTimestamp() });
+  } else {
+    profile = snap.data();
+  }
 
-    if (b.has(i)) {
-      on = false;
-      c.innerHTML = BOMB;
-      c.classList.add('bad');
-      reveal();
-      g.msg('Boom ! Perdu');
-      g.run(false);
+  profile.credits = Number(profile.credits || 0);
+  renderBalance();
+  $("#player-email").textContent = firebaseUser.email || "";
+}
+
+function showNotification(title, description) {
+  const area = $("#notifications");
+  const card = document.createElement("div");
+  card.className = "notice";
+
+  const logo = document.createElement("div");
+  logo.className = "notice-logo";
+  logo.textContent = "P";
+
+  const content = document.createElement("div");
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const text = document.createElement("p");
+  text.textContent = description;
+
+  content.append(heading, text);
+  card.append(logo, content);
+  area.prepend(card);
+
+  setTimeout(() => card.remove(), 9000);
+}
+
+function listenToNotifications() {
+  if (stopUserNotifications) stopUserNotifications();
+
+  const q = query(
+    collection(db, "notifications"),
+    where("uid", "==", user.uid),
+    orderBy("createdAt", "desc")
+  );
+
+  stopUserNotifications = onSnapshot(q, snapshot => {
+    const list = $("#my-notifications");
+    list.replaceChildren();
+
+    if (snapshot.empty) {
+      list.textContent = "Aucune notification pour le moment.";
       return;
     }
 
-    c.innerHTML = COIN;
-    c.classList.add('ok');
-    c.disabled = true;
-    k++;
-    g.mult(mu(k));
+    snapshot.forEach(item => {
+      const data = item.data();
+      const div = document.createElement("div");
+      div.className = "request";
 
-    if (k == 25 - m) cash();
-  }
+      const title = document.createElement("b");
+      title.textContent = data.title || "PEXI PLAY";
 
-  g.q('.go').onclick = () => {
-    s = g.take();
-    if (!s) return;
+      const desc = document.createElement("p");
+      desc.textContent = data.description || "";
 
-    m = +g.q('.n').value;
-    b = new Set();
+      div.append(title, desc);
+      list.append(div);
 
-    while (b.size < m) b.add(Math.random() * 25 | 0);
-
-    k = 0;
-    on = true;
-    g.mult(1);
-    g.run(true);
-
-    T.forEach(c => {
-      c.innerHTML = '';
-      c.className = 'tile';
-      c.disabled = false;
+      if (!data.seen) {
+        showNotification(data.title || "PEXI PLAY", data.description || "");
+        updateDoc(item.ref, { seen: true }).catch(console.error);
+      }
     });
-  };
-
-  g.q('.out').onclick = () => {
-    if (on && k > 0) cash();
-  };
-
-  stop = () => {
-    if (on) {
-      setBal(bal + s);
-      on = false;
-    }
-  };
+  }, error => console.error("Notifications:", error));
 }
 
-/* ---------- TOWER BUILDER ---------- */
-
-function initTower() {
-  const g = setup('#tower', '<button class="drop">Poser le bloc</button>');
-
-  g.q('.stage').innerHTML = '<div class="tw"><div class="mast"></div><div class="city"></div><div class="world"></div><div class="jib"><b class="trl"></b></div></div>';
-
-  const W = 300, H = 26;
-  const wd = g.q('.world'), tw = g.q('.tw'), cy = g.q('.city'), trl = g.q('.trl');
-
-  tw.style.zoom = Math.min(1.45, (innerWidth - 24) / 306);
-
-  let x = 0, h = '';
-
-  while (x < W) {
-    const bw = 28 + Math.random() * 26 | 0;
-    const hs = Math.random() < .35;
-
-    h += `<div class="${hs ? 'hs' : 'sk'}" style="left:${x}px;width:${bw}px;height:${hs ? 50 + Math.random() * 30 | 0 : 70 + Math.random() * 130 | 0}px"></div>`;
-    x += bw + 2;
-  }
-
-  cy.innerHTML = h;
-
-  let on = false, n, x0, w0, px, s, cur, raf, t0;
-
-  const mu = k => Math.pow(1.12, k);
-  const pal = ['#e9a15b', '#d9776a', '#e8c07d', '#c98b6b', '#cf6f77'];
-  const wins = wi => '<i></i>'.repeat(Math.max(1, Math.floor(wi / 34)));
-
-  const blk = (xx, wi, fl) => {
-    const d = document.createElement('div');
-    d.className = 'bl';
-    d.style.cssText = `left:${xx}px;width:${wi}px;bottom:${fl * H}px;background-color:${pal[fl % 5]}`;
-    d.innerHTML = wins(wi);
-    wd.append(d);
-    return d;
-  };
-
-  const pop = (a, b, big) => {
-    const d = document.createElement('div');
-    d.className = 'pop' + (big ? ' big' : '');
-    d.innerHTML = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`;
-    tw.append(d);
-    setTimeout(() => d.remove(), 1100);
-  };
-
-  const sink = () => {
-    const t = `translateY(${Math.max(0, n - 8) * H}px)`;
-    wd.style.transform = t;
-    cy.style.transform = t;
-  };
-
-  const loop = () => {
-    px = (W - w0) * (.5 + .5 * Math.sin((performance.now() - t0) * (.0035 + n * .0006)));
-    cur.style.left = px + 'px';
-    trl.style.left = (px + w0 / 2 - 9) + 'px';
-    raf = requestAnimationFrame(loop);
-  };
-
-  const spawn = () => {
-    cur = blk(0, w0, n + 1);
-    cur.insertAdjacentHTML('beforeend', '<b class="cb"></b>');
-    t0 = performance.now();
-    loop();
-  };
-
-  const cash = rm => {
-    on = false;
-    cancelAnimationFrame(raf);
-    if (rm) cur.remove();
-
-    const w = s * mu(n);
-    setBal(bal + w);
-    g.win(w);
-    g.run(false);
-  };
-
-  const drop = () => {
-    if (!on) return;
-
-    cancelAnimationFrame(raf);
-
-    const perfect = Math.abs(px - x0) < 3;
-    if (perfect) px = x0;
-
-    const o = w0 - Math.abs(px - x0);
-
-    if (o < 6) {
-      on = false;
-
-      const cb = cur.querySelector('.cb');
-      if (cb) cb.remove();
-
-      cur.style.transition = 'transform .7s,opacity .7s';
-      cur.style.transform = 'translateY(300px) rotate(25deg)';
-      cur.style.opacity = 0;
-
-      g.msg('Raté ! La tour s\'effondre');
-      g.run(false);
-      return;
-    }
-
-    const nl = Math.max(px, x0);
-
-    cur.style.left = nl + 'px';
-    cur.style.width = o + 'px';
-    cur.innerHTML = wins(o);
-
-    x0 = nl;
-    w0 = o;
-    n++;
-
-    g.mult(mu(n));
-    pop('+' + fmt(s * (mu(n) - mu(n - 1))), perfect ? 'PARFAIT !' : '', perfect);
-
-    if (n >= 12) {
-      cash(false);
-      return;
-    }
-
-    sink();
-    spawn();
-  };
-
-  tw.onclick = drop;
-  g.q('.drop').onclick = drop;
-
-  g.q('.go').onclick = () => {
-    s = g.take();
-    if (!s) return;
-
-    wd.innerHTML = '<div class="gnd"></div>';
-    n = 0;
-    sink();
-
-    x0 = 85;
-    w0 = 130;
-
-    const bs = blk(x0, w0, 0);
-    bs.classList.add('base');
-    bs.innerHTML = '<i></i><i class="dr"></i><i></i>';
-
-    on = true;
-    g.mult(1);
-    g.run(true);
-    spawn();
-  };
-
-  g.q('.out').onclick = () => {
-    if (on && n > 0) cash(true);
-  };
-
-  stop = () => {
-    if (on) {
-      setBal(bal + s);
-      on = false;
-    }
-    cancelAnimationFrame(raf);
-  };
+function login() {
+  signInWithPopup(auth, provider).catch(error => {
+    showMessage("#auth-message", "Connexion impossible : " + error.message);
+  });
 }
 
-/* ---------- CHICKEN ROAD ---------- */
-
-const MH = '<svg class="mh" viewBox="0 0 80 80"><defs><radialGradient id="mg" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#a7b0bf"/><stop offset="1" stop-color="#4b5563"/></radialGradient></defs><circle cx="40" cy="43" r="38" fill="#0007"/><circle cx="40" cy="40" r="38" fill="#1f2530"/><circle cx="40" cy="40" r="34" fill="url(#mg)"/><circle cx="40" cy="40" r="27" fill="none" stroke="#3b4350" stroke-width="3"/><path d="M40 13V67M13 40H67M21 21L59 59M59 21L21 59" stroke="#3b4350" stroke-width="2.5"/></svg>';
-
-const EGG = '<svg class="mh" viewBox="0 0 80 80" style="filter:drop-shadow(0 0 10px #fde047)"><ellipse cx="40" cy="44" rx="22" ry="29" fill="#facc15" stroke="#ca8a04" stroke-width="3"/><ellipse cx="32" cy="34" rx="6" ry="10" fill="#fef9c3" opacity=".8"/></svg>';
-
-const CH = '<svg viewBox="0 0 80 90" style="display:block"><ellipse cx="40" cy="87" rx="26" ry="4" fill="#0006"/><path d="M30 68v16M52 68v16M24 86h14M46 86h14" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M18 50Q2 44 6 26Q18 30 24 42z" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="40" cy="52" rx="26" ry="22" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="32" cy="56" rx="12" ry="13" fill="#e5e7eb" stroke="#cbd5e1" stroke-width="2"/><circle cx="52" cy="28" r="15" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><circle cx="46" cy="12" r="5" fill="#ef4444"/><circle cx="54" cy="10" r="5" fill="#ef4444"/><circle cx="61" cy="14" r="4" fill="#ef4444"/><path d="M65 25L78 30L65 35z" fill="#f59e0b"/><ellipse cx="63" cy="40" rx="3" ry="5" fill="#ef4444"/><circle cx="57" cy="25" r="3" fill="#111"/><circle cx="58" cy="24" r="1" fill="#fff"/><circle cx="48" cy="33" r="3" fill="#fca5a5" opacity=".7"/></svg>';
-
-const FIRE = '<svg class="fire" viewBox="0 0 80 100"><path d="M40 98C10 90 8 60 28 40c0 14 8 16 10 6C44 30 38 16 46 2c14 20 34 36 26 62C68 86 56 96 40 98z" fill="#ef4444"/><path d="M40 98C16 92 16 70 32 52c2 10 6 10 8 4 2-14 0-24 8-34 10 16 22 30 16 50-4 14-14 24-24 26z" fill="#f97316"/><path d="M40 98C24 92 24 76 36 62c2 8 6 8 8 2 4 8 10 14 6 24-2 6-6 9-10 10z" fill="#fde047"/></svg>';
-
-const BAR = '<svg class="bar" viewBox="0 0 90 30"><rect x="10" y="20" width="5" height="10" fill="#444"/><rect x="75" y="20" width="5" height="10" fill="#444"/><rect x="4" y="6" width="82" height="16" rx="3" fill="#fff" stroke="#999"/><path d="M10 6l10 16h12L22 6zM34 6l10 16h12L46 6zM58 6l10 16h12L70 6z" fill="#ef4444"/></svg>';
-
-const CAR = (c, d) => `<svg class="car" viewBox="0 0 40 80" style="animation-duration:${d + 2}s;animation-delay:-${d}s"><rect x="3" y="6" width="34" height="72" rx="11" fill="#0005"/><rect x="4" y="4" width="32" height="72" rx="11" fill="${c}"/><rect x="9" y="16" width="22" height="13" rx="3" fill="#bfdbfe"/><rect x="9" y="46" width="22" height="10" rx="3" fill="#93c5fd"/><rect x="0" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="0" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="8" y="70" width="7" height="4" rx="2" fill="#fef08a"/><rect x="25" y="70" width="7" height="4" rx="2" fill="#fef08a"/></svg>';
-
-const TRK = (c, d) => `<svg class="car tk" viewBox="0 0 44 130" style="animation-duration:${d + 3}s;animation-delay:-${d}s"><rect x="4" y="6" width="36" height="120" rx="6" fill="#0005"/><rect x="5" y="4" width="34" height="84" rx="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/><rect x="6" y="90" width="32" height="34" rx="8" fill="${c}"/><rect x="10" y="98" width="24" height="10" rx="2" fill="#bfdbfe"/><rect x="9" y="118" width="7" height="4" rx="2" fill="#fef08a"/><rect x="28" y="118" width="7" height="4" rx="2" fill="#fef08a"/></svg>';
-
-function initChicken() {
-  const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".12">Facile</option><option value=".2">Moyen</option><option value=".32">Difficile</option><option value=".5">Hardcore</option></select></label><button class="adv" disabled>Avancer</button>');
-
-  g.q('.stage').innerHTML = '<div class="pg"><b></b></div><div class="road"></div>';
-
-  const rd = g.q('.road'), adv = g.q('.adv'), N = 15, ch = document.createElement('div');
-  const cols = ['#dc2626', '#2563eb', '#eab308', '#16a34a', '#f8fafc'];
-
-  let on = false, k = 0, p = +g.q('.d').value, s, L = [];
-
-  const mu = i => .9 / Math.pow(1 - p, i);
-
-  const place = l => {
-    l.append(ch);
-    ch.classList.remove('hop');
-    void ch.offsetWidth;
-    ch.classList.add('hop');
-  };
-
-  const build = () => {
-    rd.innerHTML = '';
-    L = [];
-    ch.className = 'ch';
-    ch.innerHTML = CH;
-    g.q('.pg b').style.width = '0%';
-
-    for (let i = 0; i <= N; i++) {
-      const d = document.createElement('div');
-      d.className = 'ln' + (i ? '' : ' st') + (i == N ? ' gl' : '');
-
-      d.innerHTML =
-        (i && i < N ? (i % 4 == 2 ? TRK : CAR)(cols[i % 5], Math.random() * 3 + 1) : '') +
-        (i == N ? EGG : i ? MH : '') +
-        `<span class="lm">${i ? 'x' + fx(mu(i)) : 'DÉPART'}</span>`;
-
-      rd.append(d);
-      L.push(d);
-    }
-
-    L[0].append(ch);
-    rd.scrollLeft = 0;
-  };
-
-  const cash = () => {
-    on = false;
-    const w = s * mu(k);
-    setBal(bal + w);
-    g.win(w);
-    adv.disabled = true;
-    g.run(false);
-  };
-
-  g.q('.d').onchange = () => {
-    p = +g.q('.d').value;
-    build();
-  };
-
-  adv.onclick = () => {
-    if (!on) return;
-
-    if (Math.random() < p) {
-      on = false;
-      L[k + 1].classList.add('boom');
-      L[k + 1].insertAdjacentHTML('beforeend', '<i class="hole"></i>' + FIRE);
-      ch.classList.add('dead');
-      place(L[k + 1]);
-      g.msg('Grillée par les flammes ! Perdu');
-      adv.disabled = true;
-      g.run(false);
-      return;
-    }
-
-    k++;
-    L[k].classList.add('done');
-    place(L[k]);
-    g.q('.pg b').style.width = (k / N * 100) + '%';
-
-    L[k].querySelectorAll('.car').forEach(c => c.remove());
-
-    if (k < N) L[k].insertAdjacentHTML('beforeend', BAR);
-
-    g.mult(mu(k));
-    rd.scrollTo({ left: L[k].offsetLeft - 170, behavior: 'smooth' });
-
-    if (k == N) cash();
-  };
-
-  g.q('.go').onclick = () => {
-    s = g.take();
-    if (!s) return;
-
-    p = +g.q('.d').value;
-    build();
-    k = 0;
-    on = true;
-    g.mult(1);
-    g.run(true);
-    adv.disabled = false;
-  };
-
-  g.q('.out').onclick = () => {
-    if (on && k > 0) cash();
-  };
-
-  build();
-
-  stop = () => {
-    if (on) {
-      setBal(bal + s);
-      on = false;
-    }
-  };
+async function logout() {
+  if (stopRequests) stopRequests();
+  if (stopUserNotifications) stopUserNotifications();
+  if (stopNotifications) stopNotifications();
+  await signOut(auth);
 }
 
-/* ---------- MENU ---------- */
+$("#google-login").addEventListener("click", login);
+$("#logout").addEventListener("click", logout);
 
-const games = {
-  mines: initMines,
-  tower: initTower,
-  chicken: initChicken
-};
+onAuthStateChanged(auth, async firebaseUser => {
+  user = firebaseUser;
 
-document.querySelectorAll('.card').forEach(c => c.onclick = () => {
-  show('#' + c.dataset.g);
-  games[c.dataset.g]();
-});
-
-$('#home').onclick = () => {
-  if (!gameRunning) show('#menu');
-};
-
-/* ---------- COMPTE, AUTHENTIFICATION ET PORTEFEUILLE ---------- */
-
-const PAYPAL_ME_URL = 'https://www.paypal.com/paypalme/SH0PNOVA/';
-let currentUser = null;
-let authReady = false;
-
-const profileModal = $('#profileModal');
-const walletModal = $('#walletModal');
-const profilePanel = profileModal.querySelector('.wallet-panel');
-
-const authArea = document.createElement('section');
-authArea.id = 'authArea';
-authArea.className = 'auth-area';
-
-authArea.innerHTML = `
-  <div id="authSignedOut">
-    <p class="wallet-note">Connecte-toi pour ajouter des crédits ou envoyer une demande de retrait. Utilise le bouton Google avec ton compte Gmail.</p>
-    <button id="googleLogin" class="google-btn" type="button"><span class="google-mark">G</span> Continuer avec Google</button>
-    <button id="anonymousLogin" class="wallet-btn" type="button">Continuer anonymement</button>
-    <form id="emailLoginForm" class="wallet-form">
-      <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="ton@email.com"></label>
-      <label>Mot de passe<input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="6 caractères minimum"></label>
-      <div class="auth-buttons"><button id="emailLogin" type="submit">Se connecter</button><button id="emailRegister" type="button">Créer un compte</button></div>
-      <button id="forgotPassword" class="link-btn" type="button">Mot de passe oublié ?</button>
-    </form>
-  </div>
-  <div id="authSignedIn" class="hidden">
-    <p id="authIdentity" class="auth-identity"></p>
-    <button id="logout" type="button">Se déconnecter</button>
-  </div>
-  <p id="authMessage" class="wallet-message" role="status"></p>`;
-
-profilePanel.querySelector('.wallet-form').before(authArea);
-
-function authMessage(message, isError = false) {
-  const node = $('#authMessage');
-  if (node) {
-    node.textContent = message;
-    node.style.color = isError ? '#fca5a5' : '#86efac';
-  }
-}
-
-function requireLogin() {
-  if (!currentUser) {
-    authMessage('Connecte-toi d’abord avec Google, un e-mail ou en anonyme.', true);
-    profileModal.classList.remove('hidden');
-    return false;
-  }
-  return true;
-}
-
-$('#profileOpen').onclick = () => {
-  if (!gameRunning) profileModal.classList.remove('hidden');
-};
-
-$('#profileClose').onclick = () => profileModal.classList.add('hidden');
-
-profileModal.addEventListener('click', e => {
-  if (e.target === profileModal) profileModal.classList.add('hidden');
-});
-
-$('#googleLogin').onclick = async () => {
-  try {
-    await signInWithPopup(auth, googleProvider);
-    authMessage('Connexion Google réussie.');
-  } catch (e) {
-    console.error('Connexion Google:', e);
-    authMessage(firebaseError(e), true);
-  }
-};
-
-$('#anonymousLogin').onclick = async () => {
-  try {
-    await signInAnonymously(auth);
-    authMessage('Connexion anonyme réussie.');
-  } catch (e) {
-    console.error('Connexion anonyme:', e);
-    authMessage(firebaseError(e), true);
-  }
-};
-
-$('#emailLoginForm').onsubmit = async e => {
-  e.preventDefault();
-
-  try {
-    await signInWithEmailAndPassword(auth, $('#authEmail').value.trim(), $('#authPassword').value);
-    authMessage('Connexion réussie.');
-  } catch (err) {
-    console.error('Connexion e-mail:', err);
-    authMessage(firebaseError(err), true);
-  }
-};
-
-$('#emailRegister').onclick = async () => {
-  const email = $('#authEmail').value.trim();
-  const password = $('#authPassword').value;
-
-  if (!email || password.length < 6) {
-    authMessage('Entre un e-mail et un mot de passe d’au moins 6 caractères.', true);
+  if (!user) {
+    profile = null;
+    page("auth");
     return;
   }
 
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    authMessage('Compte créé et connecté.');
-  } catch (e) {
-    authMessage(firebaseError(e), true);
+    await loadProfile(user);
+    listenToNotifications();
+
+    if (user.email?.toLowerCase() === ADMIN_EMAIL) {
+      page("admin");
+      listenToAdminRequests();
+    } else {
+      page("home");
+    }
+  } catch (error) {
+    console.error(error);
+    showMessage("#auth-message", "Erreur Firebase : " + error.message);
+    page("auth");
   }
-};
+});
 
-$('#forgotPassword').onclick = async () => {
-  const email = $('#authEmail').value.trim();
+/* NAVIGATION */
+$("#profile-btn").addEventListener("click", () => page("profile"));
+$("#profile-back").addEventListener("click", () => page("home"));
+$("#withdraw-open").addEventListener("click", () => page("withdraw-section"));
+$("#withdraw-back").addEventListener("click", () => page("profile"));
+$("#admin-back").addEventListener("click", () => page("home"));
 
-  if (!email) {
-    authMessage('Entre ton adresse e-mail d’abord.', true);
+/* RETRAIT JOUEUR */
+$("#withdraw-form").addEventListener("input", () => {
+  const credits = Number($("#withdraw-form").elements.credits.value || 0);
+  $("#withdraw-value").textContent = euros(credits * 0.0003);
+});
+
+$("#withdraw-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!user || !profile) return;
+
+  const form = event.currentTarget;
+  const surname = form.elements.surname.value.trim();
+  const firstname = form.elements.firstname.value.trim();
+  const email = form.elements.email.value.trim();
+  const credits = Math.floor(Number(form.elements.credits.value));
+
+  if (!surname || !firstname || !email || !Number.isFinite(credits)) {
+    showMessage("#withdraw-message", "Vérifie les informations saisies.");
     return;
   }
 
-  try {
-    await sendPasswordResetEmail(auth, email);
-    authMessage('E-mail de réinitialisation envoyé.');
-  } catch (e) {
-    authMessage(firebaseError(e), true);
+  if (credits < 10000 || credits % 1000 !== 0) {
+    showMessage("#withdraw-message", "Le minimum est de 10 000 crédits.");
+    return;
   }
-};
 
-$('#logout').onclick = async () => {
-  try {
-    await signOut(auth);
-    authMessage('Déconnecté.');
-  } catch (e) {
-    authMessage(firebaseError(e), true);
+  if (credits > profile.credits) {
+    showMessage("#withdraw-message", "Tu n'as pas assez de crédits.");
+    return;
   }
-};
 
-function firebaseError(error) {
-  const messages = {
-    'auth/unauthorized-domain': 'Ce domaine n’est pas autorisé. Dans Firebase > Authentication > Paramètres > Domaines autorisés, ajoute localhost ou le domaine de ton site.',
-    'auth/operation-not-allowed': 'Cette méthode n’est pas activée. Active Google, E-mail/Mot de passe et Anonyme dans Firebase > Authentication > Sign-in method.',
-    'auth/popup-closed-by-user': 'La fenêtre Google a été fermée avant la fin de la connexion.',
-    'auth/cancelled-popup-request': 'Une autre fenêtre de connexion est déjà ouverte.',
-    'auth/popup-blocked': 'Autorise les fenêtres pop-up pour te connecter avec Google.',
-    'auth/invalid-credential': 'E-mail ou mot de passe incorrect.',
-    'auth/email-already-in-use': 'Cette adresse possède déjà un compte.',
-    'auth/weak-password': 'Le mot de passe doit contenir au moins 6 caractères.',
-    'auth/network-request-failed': 'Connexion Internet indisponible.'
-  };
+  const amount = credits * 0.0003;
 
-  return messages[error.code] || `Erreur Firebase : ${error.message || error.code || 'inconnue'}`;
+  try {
+    await runTransaction(db, async transaction => {
+      const ref = userRef();
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) throw new Error("Compte introuvable.");
+
+      const currentCredits = Number(snap.data().credits || 0);
+      if (currentCredits < credits) throw new Error("Solde insuffisant.");
+
+      transaction.update(ref, { credits: currentCredits - credits });
+
+      const requestRef = doc(collection(db, "withdrawals"));
+      transaction.set(requestRef, {
+        uid: user.uid,
+        playerEmail: user.email || "",
+        surname,
+        firstname,
+        paypalEmail: email,
+        credits,
+        amount,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+    });
+
+    profile.credits -= credits;
+    renderBalance();
+    form.reset();
+    $("#withdraw-value").textContent = "3,00 €";
+    showMessage("#withdraw-message", "Demande envoyée ! Tu seras averti quand elle sera payée.");
+  } catch (error) {
+    console.error(error);
+    showMessage("#withdraw-message", "Erreur : " + error.message);
+  }
+});
+
+/* TABLEAU ADMIN */
+function listenToAdminRequests() {
+  if (stopRequests) stopRequests();
+
+  const q = query(
+    collection(db, "withdrawals"),
+    where("status", "==", "pending"),
+    orderBy("createdAt", "asc")
+  );
+
+  stopRequests = onSnapshot(q, snapshot => {
+    const area = $("#admin-requests");
+    area.replaceChildren();
+
+    if (snapshot.empty) {
+      area.textContent = "Aucune demande en attente.";
+      return;
+    }
+
+    snapshot.forEach(item => {
+      const data = item.data();
+      const card = document.createElement("div");
+      card.className = "request";
+
+      const heading = document.createElement("h3");
+      heading.textContent = `${data.firstname || ""} ${data.surname || ""}`;
+
+      const details = document.createElement("p");
+      details.textContent =
+        `Compte : ${data.playerEmail || "inconnu"} | PayPal : ${data.paypalEmail || "inconnu"}`;
+
+      const amount = document.createElement("p");
+      amount.textContent =
+        `${money(data.credits)} crédits — ${euros(data.amount)}`;
+
+      const button = document.createElement("button");
+      button.className = "primary";
+      button.textContent = "Marquer comme payé";
+      button.addEventListener("click", () => markAsPaid(item.id, data, button));
+
+      card.append(heading, details, amount, button);
+      area.append(card);
+    });
+  }, error => {
+    console.error(error);
+    showMessage("#admin-requests", "Erreur de lecture : " + error.message);
+  });
 }
 
-onAuthStateChanged(auth, async user => {
-  currentUser = user;
-  authReady = true;
+async function markAsPaid(requestId, request, button) {
+  if (user?.email?.toLowerCase() !== ADMIN_EMAIL) {
+    alert("Accès administrateur refusé.");
+    return;
+  }
 
-  $('#authSignedOut').classList.toggle('hidden', !!user);
-  $('#authSignedIn').classList.toggle('hidden', !user);
+  const confirmed = confirm(
+    `As-tu réellement envoyé ${euros(request.amount)} à ${request.paypalEmail} sur PayPal ?`
+  );
+  if (!confirmed) return;
 
-  if (user) {
-    const label = user.isAnonymous ? 'Compte anonyme' : (user.displayName || user.email || 'Compte connecté');
-    $('#authIdentity').textContent = `${label} — ${user.email || 'sans adresse e-mail'} `;
+  button.disabled = true;
 
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
+  try {
+    const paidQuery = query(
+      collection(db, "withdrawals"),
+      where("uid", "==", request.uid),
+      where("status", "==", "paid")
+    );
 
-      if (!snap.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email || null,
-          displayName: user.displayName || null,
-          createdAt: serverTimestamp()
-        });
+    const previous = await getDocs(paidQuery);
+    const withdrawalNumber = previous.size + 1;
+
+    const requestRef = doc(db, "withdrawals", requestId);
+    const notificationRef = doc(collection(db, "notifications"));
+
+    const title = "PEXI PLAY";
+    const description = withdrawalNumber === 1
+      ? `Félicitations ! Tu as effectué ton premier retrait de ${euros(request.amount)}. Ton paiement PayPal a été envoyé à ${request.paypalEmail}.`
+      : `Félicitations ! Ton ${withdrawalNumber}ème retrait de ${euros(request.amount)} a été payé. Ton paiement PayPal a été envoyé à ${request.paypalEmail}.`;
+
+    await runTransaction(db, async transaction => {
+      const fresh = await transaction.get(requestRef);
+      if (!fresh.exists()) throw new Error("Demande introuvable.");
+      if (fresh.data().status !== "pending") throw new Error("Cette demande a déjà été traitée.");
+
+      transaction.update(requestRef, {
+        status: "paid",
+        paidAt: serverTimestamp(),
+        paidBy: user.email
+      });
+
+      transaction.set(notificationRef, {
+        uid: request.uid,
+        title,
+        description,
+        amount: request.amount,
+        withdrawalNumber,
+        seen: false,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    showMessage("#admin-requests", "Demande marquée comme payée.");
+  } catch (error) {
+    console.error(error);
+    alert("Impossible de traiter la demande : " + error.message);
+    button.disabled = false;
+  }
+}
+
+/* JEUX */
+function startGame(name) {
+  if (!profile) return;
+
+  const bet = Math.floor(Number($("#bet").value));
+  if (!Number.isFinite(bet) || bet < 1) {
+    alert("Entre une mise valide.");
+    return;
+  }
+
+  if (bet > profile.credits) {
+    alert("Tu n'as pas assez de crédits.");
+    return;
+  }
+
+  profile.credits -= bet;
+  renderBalance();
+  setDoc(userRef(), { credits: profile.credits }, { merge: true })
+    .catch(console.error);
+
+  activeGame = name;
+  game = { bet, multiplier: 1, step: 0, active: true, mines: [] };
+
+  $("#game-content").replaceChildren();
+  $("#multiplier").textContent = "x1.00";
+  $("#game-message").textContent = "Partie en cours. Bonne chance !";
+  $("#game-title").textContent = ({
+    mines: "Coin Miner",
+    tower: "Tower Builder",
+    chicken: "Chicken Road"
+  })[name];
+
+  if (name === "mines") setupMines();
+  if (name === "tower") setupTower();
+  if (name === "chicken") setupChicken();
+
+  $("#advance").textContent = name === "mines" ? "Découvrir une case" :
+    name === "tower" ? "Construire un étage" : "Avancer la poule";
+
+  page("game-area");
+}
+
+function setGameText(message) {
+  $("#game-message").textContent = message;
+  $("#multiplier").textContent = "x" + game.multiplier.toFixed(2);
+}
+
+async function endGame(won) {
+  if (!game.active) return;
+  game.active = false;
+
+  if (won) {
+    const prize = Math.floor(game.bet * game.multiplier);
+    profile.credits += prize;
+    await setDoc(userRef(), { credits: profile.credits }, { merge: true });
+    renderBalance();
+    setGameText(`Bravo ! Tu gagnes ${money(prize)} crédits.`);
+  } else {
+    setGameText("Perdu ! Tu as perdu ta mise.");
+  }
+
+  $("#advance").disabled = true;
+  $("#cashout").disabled = true;
+  $("#back-home").textContent = "Retour aux jeux";
+}
+
+$("#cashout").addEventListener("click", () => {
+  if (!game.active || game.step === 0) return;
+  endGame(true);
+});
+
+$("#back-home").addEventListener("click", () => {
+  if (game.active) {
+    alert("Termine ta partie avant de revenir aux jeux.");
+    return;
+  }
+  page("home");
+});
+
+$$("[data-game]").forEach(button => {
+  button.addEventListener("click", () => startGame(button.dataset.game));
+});
+
+/* COIN MINER */
+function setupMines() {
+  const grid = document.createElement("div");
+  grid.className = "tile-grid";
+  game.mines = [];
+
+  while (game.mines.length < 5) {
+    const n = Math.floor(Math.random() * 25);
+    if (!game.mines.includes(n)) game.mines.push(n);
+  }
+
+  for (let i = 0; i < 25; i++) {
+    const tile = document.createElement("button");
+    tile.className = "tile";
+    tile.textContent = "?";
+    tile.addEventListener("click", () => {
+      if (!game.active || tile.disabled) return;
+      tile.disabled = true;
+      game.step++;
+
+      if (game.mines.includes(i)) {
+        tile.textContent = "💣";
+        tile.classList.add("mine");
+        endGame(false);
+      } else {
+        tile.textContent = "💎";
+        tile.classList.add("safe");
+        game.multiplier = 1 + game.step * 0.25;
+        setGameText(`${game.step} case(s) sûre(s). Tu peux encaisser.`);
       }
-    } catch (e) {
-      authMessage('Connexion OK, mais profil Firestore non initialisé : vérifie les règles.', true);
-    }
+    });
+    grid.append(tile);
   }
-});
 
-// Ajouter des crédits : ouverture PayPal.
-// Le solde n'est pas augmenté automatiquement au retour de PayPal.
-$('#deposit').onclick = () => {
-  if (!requireLogin()) return;
-  window.open(PAYPAL_ME_URL, '_blank', 'noopener,noreferrer');
-};
+  $("#game-content").append(grid);
+}
 
-const closeWallet = () => {
-  walletModal.classList.add('hidden');
-  $('#walletMessage').textContent = '';
-};
+/* TOWER BUILDER */
+function setupTower() {
+  const tower = document.createElement("div");
+  tower.className = "tower";
+  tower.id = "tower-stack";
+  $("#game-content").append(tower);
+  const base = document.createElement("div");
+  base.className = "floor";
+  tower.append(base);
+}
 
-$('#withdraw').onclick = () => {
-  if (!gameRunning && requireLogin()) {
-    profileModal.classList.add('hidden');
-    walletModal.classList.remove('hidden');
-    $('#walletTitle').textContent = 'Retrait de crédits';
-  }
-};
+function towerStep() {
+  const tower = $("#tower-stack");
+  if (!tower || !game.active) return;
 
-$('#walletClose').onclick = closeWallet;
-
-walletModal.addEventListener('click', e => {
-  if (e.target === walletModal) closeWallet();
-});
-
-$('#withdrawForm').addEventListener('input', e => {
-  if (e.target.name === 'credits') {
-    const n = Math.max(0, Number(e.target.value) || 0);
-    $('#withdrawValue').textContent = 'Montant estimé : ' + (n / 10000 * 3).toFixed(2).replace('.', ',') + ' €';
-  }
-});
-
-$('#withdrawForm').onsubmit = async e => {
-  e.preventDefault();
-
-  if (!requireLogin()) return;
-
-  const f = new FormData(e.currentTarget);
-  const credits = Math.floor(Number(f.get('credits')));
-  const email = String(f.get('email')).trim();
-
-  if (credits < 10000 || credits % 10000 !== 0) {
-    $('#walletMessage').textContent = 'Le retrait doit être un multiple de 10 000 crédits.';
+  if (Math.random() < 0.16) {
+    endGame(false);
     return;
   }
 
-  if (credits > bal) {
-    $('#walletMessage').textContent = 'Tu ne possèdes pas assez de crédits affichés.';
+  const floor = document.createElement("div");
+  floor.className = "floor";
+  tower.append(floor);
+
+  game.step++;
+  game.multiplier = 1 + game.step * 0.2;
+  setGameText(`${game.step} étage(s) construits. Continue ou encaisse.`);
+
+  if (game.step >= 20) endGame(true);
+}
+
+/* CHICKEN ROAD */
+function setupChicken() {
+  const road = document.createElement("div");
+  road.className = "road";
+  road.id = "chicken-road";
+  for (let i = 0; i < 12; i++) {
+    const tile = document.createElement("div");
+    tile.textContent = "🟩";
+    road.append(tile);
+  }
+  $("#game-content").append(road);
+  const chicken = document.createElement("p");
+  chicken.id = "chicken-position";
+  chicken.textContent = "🐔 Départ";
+  chicken.style.fontSize = "28px";
+  chicken.style.marginTop = "12px";
+  $("#game-content").append(chicken);
+}
+
+function chickenStep() {
+  if (!game.active) return;
+  const tiles = $("#chicken-road").children;
+  const tile = tiles[game.step];
+  if (!tile) return;
+
+  if (Math.random() < 0.22) {
+    tile.textContent = "🕳️";
+    endGame(false);
     return;
   }
 
-  const request = {
-    uid: currentUser.uid,
-    emailCompte: currentUser.email || null,
-    nom: String(f.get('surname')).trim(),
-    prenom: String(f.get('firstname')).trim(),
-    emailPayPal: email,
-    credits,
-    montantEuros: credits / 10000 * 3,
-    status: 'pending',
-    createdAt: serverTimestamp()
-  };
+  tile.textContent = "🐔";
+  game.step++;
+  game.multiplier = 1 + game.step * 0.3;
+  $("#chicken-position").textContent = `🐔 Étape ${game.step}`;
+  setGameText(`${game.step} étape(s) réussie(s). Encaisse ou continue.`);
 
-  try {
-    await addDoc(collection(db, 'withdrawalRequests'), request);
-    $('#walletMessage').textContent = 'Demande envoyée à PEXI PLAY. Elle doit être vérifiée manuellement avant tout paiement.';
-    e.currentTarget.reset();
-    $('#withdrawValue').textContent = 'Montant estimé : 3 €';
-  } catch (err) {
-    $('#walletMessage').textContent = `Impossible d’envoyer la demande : ${firebaseError(err)}`;
+  if (game.step >= 12) endGame(true);
+}
+
+$("#advance").addEventListener("click", () => {
+  if (!game.active) return;
+  if (activeGame === "tower") towerStep();
+  if (activeGame === "chicken") chickenStep();
+  if (activeGame === "mines") {
+    const next = [...$("#game-content").querySelectorAll(".tile")]
+      .find(tile => !tile.disabled);
+    if (next) next.click();
   }
-};
-
-setBal(bal);
-show('#menu');
+});
