@@ -86,6 +86,46 @@ input,select{padding:8px;border-radius:8px;border:0;width:130px;background:#222b
 .pop small{display:block;font-size:20px;font-weight:800;color:#fff;text-shadow:0 2px 0 #be123c,0 0 12px #f43f5e}
 .pop.big b{font-size:60px}
 @keyframes pp{0%{transform:translateY(20px) scale(.4);opacity:0}25%{transform:translateY(0) scale(1.25);opacity:1}100%{transform:translateY(-70px) scale(1);opacity:0}}
+/* ---- v4 : boutons, tailles, gros gains, Chicken Road ---- */
+#cr{font-size:22px}
+button{font-weight:800;letter-spacing:.5px;border-radius:14px;padding:14px 18px;background:linear-gradient(#4f5fb3,#2b3668);box-shadow:0 5px 0 #151b3d,0 8px 14px #0006;transition:transform .08s,box-shadow .08s,filter .15s}
+button:hover:not(:disabled){filter:brightness(1.15)}
+button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3d}
+.go{font-size:22px;background:linear-gradient(#34d399,#059669);box-shadow:0 5px 0 #064e3b,0 8px 14px #0006}
+.out{font-size:20px;background:linear-gradient(#fcd34d,#d97706);box-shadow:0 5px 0 #78350f,0 8px 14px #0006}
+.adv,.drop{font-size:22px;background:linear-gradient(#60a5fa,#2563eb);box-shadow:0 5px 0 #1e3a8a,0 8px 14px #0006}
+.q button{padding:8px 11px;font-size:14px;box-shadow:0 3px 0 #151b3d}
+.bet{display:flex;gap:6px;align-items:center}
+.box{max-width:640px}
+.stage{position:relative}
+#menu{max-width:720px}
+.card{padding:30px;font-size:26px}
+.neon{font-size:42px}
+.mult{font-size:40px}
+.msg{font-size:18px;font-weight:700}
+.wb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;pointer-events:none;background:radial-gradient(#fde04777,transparent 65%);animation:wb 2s ease-out forwards}
+.wb b{font-size:clamp(48px,15vw,110px);font-weight:900;color:#fde047;-webkit-text-stroke:3px #7c2d12;text-shadow:0 6px 0 #b45309,0 0 30px #f59e0b}
+.wb small{font-size:30px;font-weight:900;color:#fff;text-shadow:0 3px 0 #be123c,0 0 16px #f43f5e}
+@keyframes wb{0%{transform:scale(.3);opacity:0}15%{transform:scale(1.2);opacity:1}30%{transform:scale(1)}85%{opacity:1}100%{transform:scale(1.05);opacity:0}}
+.ln{flex:0 0 120px;height:340px;border-right:4px dashed rgba(255,255,255,.3)}
+.mh{width:104px;height:104px;margin:-52px 0 0 -52px}
+.lm{font-size:18px;padding:4px 12px}
+.ln.st .lm{font-size:15px}
+.ch{width:88px;margin-left:-44px;top:64px}
+.ch svg{animation:idle .9s ease-in-out infinite}
+@keyframes idle{50%{transform:translateY(-4px) scaleY(1.04)}}
+.ch.dead svg{animation:none}
+.fire{width:120px;margin-left:-60px;top:10px;filter:drop-shadow(0 0 22px #f97316)}
+.car{width:52px;margin-left:-26px}
+.car.tk{width:56px;margin-left:-28px;top:-200px}
+@keyframes drive{to{top:360px}}
+.bar{top:10px}
+.hole{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:radial-gradient(#000,#1c0a00 70%);box-shadow:0 0 30px #f97316;z-index:0}
+.boom .mh{animation:lid .8s ease-out forwards}
+.boom .lm{display:none}
+@keyframes lid{to{transform:translateY(-170px) rotate(540deg);opacity:0}}
+.pg{height:10px;background:#0006;border-radius:6px;margin-bottom:8px;overflow:hidden}
+.pg b{display:block;height:100%;width:0;background:linear-gradient(90deg,#fde047,#f97316);transition:width .3s}
 </style>
 </head>
 <body>
