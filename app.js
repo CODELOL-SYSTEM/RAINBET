@@ -1,10 +1,19 @@
+// Abréviations : 1K = mille, 1M = million, 1B = milliard, 1T = mille milliards...
+const fmt = v => {
+  const u = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
+  let i = 0, x = Math.abs(v);
+  while (x >= 999.995 && i < u.length - 1) { x /= 1000; i++; }
+  const t = i ? (x < 10 ? x.toFixed(2) : x < 100 ? x.toFixed(1) : x.toFixed(0)) : x.toFixed(2);
+  return (v < 0 ? '-' : '') + (+t) + u[i];
+};
+const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
 let bal = 1000, stop = () => {};
 try { bal = +localStorage.getItem('mj_bal') || 1000; } catch (e) {}
 
 function setBal(v) {
   bal = Math.round(v * 100) / 100;
-  $('#bal').textContent = bal.toFixed(2);
+  $('#bal').textContent = fmt(bal);
   try { localStorage.setItem('mj_bal', bal); } catch (e) {}
   $('#refill').classList.toggle('hidden', bal >= 1);
 }
@@ -18,17 +27,27 @@ function show(id) {
 function setup(id, extra) {
   const el = $(id);
   el.innerHTML = `<div class="box"><div class="stage"></div><div class="ctl">
-    <label>Crédits en jeu<input class="stk" type="number" value="10" min="1"></label>${extra}
+    <label>Crédits en jeu<span class="bet"><input class="stk" type="number" value="10" min="1"><span class="q"><button data-m=".5">½</button><button data-m="2">×2</button><button data-m="max">MAX</button></span></span></label>${extra}
     <div class="mult">x1.00</div>
-    <button class="go">Jouer</button><button class="out" disabled>Encaisser</button></div>
+    <button class="go">JOUER</button><button class="out" disabled>ENCAISSER</button></div>
     <div class="msg"></div></div>`;
   const q = s => el.querySelector(s);
+  el.querySelectorAll('.q button').forEach(b => b.onclick = () => {
+    const i = q('.stk');
+    i.value = b.dataset.m == 'max' ? Math.max(1, Math.floor(bal)) : Math.max(1, Math.floor(i.value * b.dataset.m));
+  });
   return {
     q,
     msg: t => q('.msg').textContent = t,
-    mult: m => q('.mult').textContent = 'x' + m.toFixed(2),
+    mult: m => q('.mult').textContent = 'x' + fx(m),
+    win: w => {
+      q('.msg').textContent = 'Gagné : +' + fmt(w) + ' crédits';
+      const d = document.createElement('div'); d.className = 'wb';
+      d.innerHTML = `<b>+${fmt(w)}</b><small>GAGNÉ !</small>`;
+      q('.stage').append(d); setTimeout(() => d.remove(), 2000);
+    },
     run: v => {
-      el.querySelectorAll('.ctl input,.ctl select').forEach(x => x.disabled = v);
+      el.querySelectorAll('.ctl input,.ctl select,.q button').forEach(x => x.disabled = v);
       q('.go').disabled = v; q('.out').disabled = !v;
     },
     take: () => {
@@ -45,7 +64,7 @@ const GEM = '<svg viewBox="0 0 40 40"><path d="M8 15L14 7H26L32 15L20 34Z" fill=
 const BOMB = '<svg viewBox="0 0 40 40"><circle cx="19" cy="23" r="12" fill="#1f2937"/><path d="M26 13L31 8" stroke="#a16207" stroke-width="3"/><circle cx="32" cy="7" r="3" fill="#f97316"/><circle cx="15" cy="19" r="3" fill="#fff6"/></svg>';
 
 function initMines() {
-  const g = setup('#mines', '<label>Mines<select class="n">' + [1, 3, 5, 10, 20].map(n => `<option>${n}</option>`).join('') + '</select></label>');
+  const g = setup('#mines', '<label>Mines<select class="n">' + [3, 5, 10, 15, 20, 24].map(n => `<option>${n}</option>`).join('') + '</select></label>');
   g.q('.stage').innerHTML = '<div class="neon">COIN MINER</div><div class="felt"><div class="grid"></div></div>';
   let on = false, b, k, s, m;
   const T = [...Array(25)].map((_, i) => {
@@ -53,14 +72,14 @@ function initMines() {
     c.className = 'tile'; c.disabled = true; c.onclick = () => pick(i);
     g.q('.grid').append(c); return c;
   });
-  const mu = n => { let r = .97; for (let i = 0; i < n; i++) r *= (25 - i) / (25 - m - i); return r; };
+  const mu = n => { let r = .9; for (let i = 0; i < n; i++) r *= (25 - i) / (25 - m - i); return r; };
   const reveal = () => T.forEach((c, i) => {
     if (!c.classList.contains('ok') && !c.classList.contains('bad')) { c.innerHTML = b.has(i) ? BOMB : GEM; c.classList.add('dim'); }
     c.disabled = true;
   });
   const cash = () => {
     on = false; const w = s * mu(k); setBal(bal + w);
-    g.msg('Gagné : +' + w.toFixed(2) + ' crédits'); reveal(); g.run(false);
+    g.win(w); reveal(); g.run(false);
   };
   function pick(i) {
     if (!on) return;
@@ -84,6 +103,7 @@ function initTower() {
   const g = setup('#tower', '<button class="drop">Poser le bloc</button>');
   g.q('.stage').innerHTML = '<div class="tw"><div class="mast"></div><div class="city"></div><div class="world"></div><div class="jib"><b class="trl"></b></div></div>';
   const W = 300, H = 26, wd = g.q('.world'), tw = g.q('.tw'), cy = g.q('.city'), trl = g.q('.trl');
+  tw.style.zoom = Math.min(1.45, (innerWidth - 24) / 306);
   let x = 0, h = '';
   while (x < W) {
     const bw = 28 + Math.random() * 26 | 0, hs = Math.random() < .35;
@@ -92,7 +112,7 @@ function initTower() {
   }
   cy.innerHTML = h;
   let on = false, n, x0, w0, px, s, cur, raf, t0;
-  const mu = k => Math.pow(1.22, k);
+  const mu = k => Math.pow(1.12, k);
   const pal = ['#e9a15b', '#d9776a', '#e8c07d', '#c98b6b', '#cf6f77'];
   const wins = wi => '<i></i>'.repeat(Math.max(1, Math.floor(wi / 34)));
   const blk = (xx, wi, fl) => {
@@ -106,19 +126,19 @@ function initTower() {
   };
   const sink = () => { const t = `translateY(${Math.max(0, n - 8) * H}px)`; wd.style.transform = t; cy.style.transform = t; };
   const loop = () => {
-    px = (W - w0) * (.5 + .5 * Math.sin((performance.now() - t0) * (.003 + n * .0003)));
+    px = (W - w0) * (.5 + .5 * Math.sin((performance.now() - t0) * (.0035 + n * .0006)));
     cur.style.left = px + 'px'; trl.style.left = (px + w0 / 2 - 9) + 'px'; raf = requestAnimationFrame(loop);
   };
   const spawn = () => { cur = blk(0, w0, n + 1); cur.insertAdjacentHTML('beforeend', '<b class="cb"></b>'); t0 = performance.now(); loop(); };
   const cash = rm => {
     on = false; cancelAnimationFrame(raf); if (rm) cur.remove();
-    const w = s * mu(n); setBal(bal + w); g.msg('Gagné : +' + w.toFixed(2) + ' crédits');
-    pop('+' + +w.toFixed(2), 'GAGNÉ !', true); g.run(false);
+    const w = s * mu(n); setBal(bal + w); g.win(w);
+    g.run(false);
   };
   const drop = () => {
     if (!on) return;
     cancelAnimationFrame(raf);
-    const perfect = Math.abs(px - x0) < 5;
+    const perfect = Math.abs(px - x0) < 3;
     if (perfect) px = x0;
     const o = w0 - Math.abs(px - x0);
     if (o < 6) {
@@ -130,7 +150,7 @@ function initTower() {
     const nl = Math.max(px, x0);
     cur.style.left = nl + 'px'; cur.style.width = o + 'px'; cur.innerHTML = wins(o);
     x0 = nl; w0 = o; n++; g.mult(mu(n));
-    pop('+' + +(s * (mu(n) - mu(n - 1))).toFixed(2), perfect ? 'PARFAIT !' : '', perfect);
+    pop('+' + fmt(s * (mu(n) - mu(n - 1))), perfect ? 'PARFAIT !' : '', perfect);
     if (n >= 12) { cash(false); return; }
     sink(); spawn();
   };
@@ -138,7 +158,7 @@ function initTower() {
   g.q('.go').onclick = () => {
     s = g.take(); if (!s) return;
     wd.innerHTML = '<div class="gnd"></div>'; n = 0; sink();
-    x0 = 80; w0 = 140; const bs = blk(x0, w0, 0); bs.classList.add('base'); bs.innerHTML = '<i></i><i class="dr"></i><i></i>';
+    x0 = 85; w0 = 130; const bs = blk(x0, w0, 0); bs.classList.add('base'); bs.innerHTML = '<i></i><i class="dr"></i><i></i>';
     on = true; g.mult(1); g.run(true); spawn();
   };
   g.q('.out').onclick = () => { if (on && n > 0) cash(true); };
@@ -153,41 +173,43 @@ const FIRE = '<svg class="fire" viewBox="0 0 80 100"><path d="M40 98C10 90 8 60 
 const BAR = '<svg class="bar" viewBox="0 0 90 30"><rect x="10" y="20" width="5" height="10" fill="#444"/><rect x="75" y="20" width="5" height="10" fill="#444"/><rect x="4" y="6" width="82" height="16" rx="3" fill="#fff" stroke="#999"/><path d="M10 6l10 16h12L22 6zM34 6l10 16h12L46 6zM58 6l10 16h12L70 6z" fill="#ef4444"/></svg>';
 const CAR = (c, d) => `<svg class="car" viewBox="0 0 40 80" style="animation-duration:${d + 2}s;animation-delay:-${d}s"><rect x="3" y="6" width="34" height="72" rx="11" fill="#0005"/><rect x="4" y="4" width="32" height="72" rx="11" fill="${c}"/><rect x="9" y="16" width="22" height="13" rx="3" fill="#bfdbfe"/><rect x="9" y="46" width="22" height="10" rx="3" fill="#93c5fd"/><rect x="0" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="0" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="8" y="70" width="7" height="4" rx="2" fill="#fef08a"/><rect x="25" y="70" width="7" height="4" rx="2" fill="#fef08a"/></svg>`;
 
+const TRK = (c, d) => `<svg class="car tk" viewBox="0 0 44 130" style="animation-duration:${d + 3}s;animation-delay:-${d}s"><rect x="4" y="6" width="36" height="120" rx="6" fill="#0005"/><rect x="5" y="4" width="34" height="84" rx="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/><rect x="6" y="90" width="32" height="34" rx="8" fill="${c}"/><rect x="10" y="98" width="24" height="10" rx="2" fill="#bfdbfe"/><rect x="9" y="118" width="7" height="4" rx="2" fill="#fef08a"/><rect x="28" y="118" width="7" height="4" rx="2" fill="#fef08a"/></svg>`;
+
 function initChicken() {
-  const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".08">Facile</option><option value=".15">Moyen</option><option value=".25">Difficile</option><option value=".4">Hardcore</option></select></label><button class="adv" disabled>Avancer</button>');
-  g.q('.stage').innerHTML = '<div class="road"></div>';
+  const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".12">Facile</option><option value=".2">Moyen</option><option value=".32">Difficile</option><option value=".5">Hardcore</option></select></label><button class="adv" disabled>Avancer</button>');
+  g.q('.stage').innerHTML = '<div class="pg"><b></b></div><div class="road"></div>';
   const rd = g.q('.road'), adv = g.q('.adv'), N = 15, ch = document.createElement('div');
   const cols = ['#dc2626', '#2563eb', '#eab308', '#16a34a', '#f8fafc'];
   let on = false, k = 0, p = +g.q('.d').value, s, L = [];
-  const mu = i => .97 / Math.pow(1 - p, i);
+  const mu = i => .9 / Math.pow(1 - p, i);
   const place = l => { l.append(ch); ch.classList.remove('hop'); void ch.offsetWidth; ch.classList.add('hop'); };
   const build = () => {
-    rd.innerHTML = ''; L = []; ch.className = 'ch'; ch.innerHTML = CH;
+    rd.innerHTML = ''; L = []; ch.className = 'ch'; ch.innerHTML = CH; g.q('.pg b').style.width = '0%';
     for (let i = 0; i <= N; i++) {
       const d = document.createElement('div'); d.className = 'ln' + (i ? '' : ' st') + (i == N ? ' gl' : '');
-      d.innerHTML = (i && i < N ? CAR(cols[i % 5], Math.random() * 3 + 1) : '') + (i == N ? EGG : i ? MH : '') +
-        `<span class="lm">${i ? 'x' + mu(i).toFixed(2) : 'DÉPART'}</span>`;
+      d.innerHTML = (i && i < N ? (i % 4 == 2 ? TRK : CAR)(cols[i % 5], Math.random() * 3 + 1) : '') + (i == N ? EGG : i ? MH : '') +
+        `<span class="lm">${i ? 'x' + fx(mu(i)) : 'DÉPART'}</span>`;
       rd.append(d); L.push(d);
     }
     L[0].append(ch); rd.scrollLeft = 0;
   };
   const cash = () => {
     on = false; const w = s * mu(k); setBal(bal + w);
-    g.msg('Gagné : +' + w.toFixed(2) + ' crédits'); adv.disabled = true; g.run(false);
+    g.win(w); adv.disabled = true; g.run(false);
   };
   g.q('.d').onchange = () => { p = +g.q('.d').value; build(); };
   adv.onclick = () => {
     if (!on) return;
     if (Math.random() < p) {
-      on = false; L[k + 1].insertAdjacentHTML('beforeend', FIRE);
+      on = false; L[k + 1].classList.add('boom'); L[k + 1].insertAdjacentHTML('beforeend', '<i class="hole"></i>' + FIRE);
       ch.classList.add('dead'); place(L[k + 1]);
       g.msg('Grillée par les flammes ! Perdu'); adv.disabled = true; g.run(false); return;
     }
-    k++; L[k].classList.add('done'); place(L[k]);
+    k++; L[k].classList.add('done'); place(L[k]); g.q('.pg b').style.width = (k / N * 100) + '%';
     // la barrière se pose : plus aucune voiture sur la voie franchie
     L[k].querySelectorAll('.car').forEach(c => c.remove());
     if (k < N) L[k].insertAdjacentHTML('beforeend', BAR);
-    g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 120, behavior: 'smooth' });
+    g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 170, behavior: 'smooth' });
     if (k == N) cash();
   };
   g.q('.go').onclick = () => {
