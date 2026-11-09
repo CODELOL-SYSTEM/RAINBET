@@ -1,812 +1,154 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  sendPasswordResetEmail, signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import {
-  getFirestore, doc, getDoc, setDoc, collection, addDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: ["AIzaSyDecLiaNoWp", "JSqfIV7DCPNdD8Y0iPoPT6A"].join(""),
-  authDomain: "pexi-play.firebaseapp.com",
-  projectId: "pexi-play",
-  storageBucket: "pexi-play.firebasestorage.app",
-  messagingSenderId: "175370623468",
-  appId: "1:175370623468:web:82b66d44cac69b6502c8c9",
-  measurementId: "G-JFNB7XSXPL"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
-
-const START_CREDITS = 1000;
-const CREDIT_VALUE = 0.001;
-const PAYPAL_URL = "https://www.paypal.com/paypalme/SH0PNOVA/";
-
-let currentUser = null;
-let userData = null;
-let currentGame = null;
-let gameState = {};
-let unsubscribeAuth = null;
-
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
-
-function formatCredits(value) {
-  return Math.floor(Number(value) || 0).toLocaleString("fr-FR");
-}
-
-function formatEuro(value) {
-  return (Number(value) || 0).toLocaleString("fr-FR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + " €";
-}
-
-function getEuroFromCredits(credits) {
-  return Number(credits || 0) * CREDIT_VALUE;
-}
-
-function showMessage(message, type = "info") {
-  let box = $("#toast");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "toast";
-    document.body.appendChild(box);
-  }
-  box.textContent = message;
-  box.className = `toast ${type}`;
-  box.style.display = "block";
-  clearTimeout(box._timer);
-  box._timer = setTimeout(() => {
-    box.style.display = "none";
-  }, 3500);
-}
-
-function setText(selector, value) {
-  const el = $(selector);
-  if (el) el.textContent = value;
-}
-
-function getUserRef(uid = currentUser?.uid) {
-  return doc(db, "users", uid);
-}
-
-async function loadUserData(user) {
-  const ref = getUserRef(user.uid);
-  const snap = await getDoc(ref);
-
-  if (snap.exists()) {
-    userData = snap.data();
-  } else {
-    userData = {
-      uid: user.uid,
-      email: user.email || "",
-      displayName: user.displayName || "Joueur",
-      credits: START_CREDITS,
-      createdAt: serverTimestamp()
-    };
-    await setDoc(ref, userData);
-  }
-
-  userData.credits = Number(userData.credits || 0);
-  updateBalance();
-}
-
-async function saveUserData() {
-  if (!currentUser || !userData) return;
-  await setDoc(getUserRef(), userData, { merge: true });
-}
-
-function updateBalance() {
-  const credits = Number(userData?.credits || 0);
-  setText("#balance", formatCredits(credits));
-  setText("#credits", formatCredits(credits));
-  setText(".balance-value", formatCredits(credits));
-  setText("#balance-euros", formatEuro(getEuroFromCredits(credits)));
-}
-
-function showLoggedInUI(user) {
-  const login = $("#login-screen");
-  const profile = $("#profile-screen");
-  if (login) login.style.display = "none";
-  if (profile) profile.style.display = "block";
-
-  setText("#profile-name", user.displayName || user.email || "Joueur");
-  setText("#profile-email", user.email || "Compte invité");
-  updateBalance();
-}
-
-function showLoggedOutUI() {
-  const login = $("#login-screen");
-  const profile = $("#profile-screen");
-  if (login) login.style.display = "block";
-  if (profile) profile.style.display = "none";
-}
-
-async function loginGoogle() {
-  try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function loginEmail(email, password) {
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function registerEmail(email, password) {
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function loginGuest() {
-  try {
-    await signInAnonymously(auth);
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function resetPassword(email) {
-  if (!email) {
-    showMessage("Entre ton adresse e-mail.", "error");
-    return;
-  }
-  try {
-    await sendPasswordResetEmail(auth, email);
-    showMessage("E-mail de réinitialisation envoyé.", "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-async function logout() {
-  try {
-    await signOut(auth);
-    currentUser = null;
-    userData = null;
-    showLoggedOutUI();
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-function bindAuthButtons() {
-  $("#google-login")?.addEventListener("click", loginGoogle);
-  $("#guest-login")?.addEventListener("click", loginGuest);
-  $("#logout")?.addEventListener("click", logout);
-
-  $("#email-login")?.addEventListener("click", () => {
-    loginEmail($("#email")?.value, $("#password")?.value);
-  });
-
-  $("#email-register")?.addEventListener("click", () => {
-    registerEmail($("#email")?.value, $("#password")?.value);
-  });
-
-  $("#forgot-password")?.addEventListener("click", () => {
-    resetPassword($("#email")?.value);
-  });
-}
-
-function showPage(pageName) {
-  $$(".page").forEach(page => {
-    page.style.display = page.dataset.page === pageName ? "block" : "none";
-  });
-
-  $$(".nav-btn").forEach(button => {
-    button.classList.toggle("active", button.dataset.page === pageName);
-  });
-}
-
-function bindNavigation() {
-  $$(".nav-btn").forEach(button => {
-    button.addEventListener("click", () => {
-      if (currentGame && gameState.active) {
-        showMessage("Termine ta partie avant de quitter le jeu.", "error");
-        return;
-      }
-      showPage(button.dataset.page);
-    });
-  });
-}
-
-function openAddFunds() {
-  const amountInput = $("#deposit-amount");
-  const amount = Number(amountInput?.value || 0);
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    showMessage("Entre un montant valide.", "error");
-    return;
-  }
-
-  const url = `${PAYPAL_URL}${encodeURIComponent(amount.toFixed(2))}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-
-  showMessage("Après le paiement, le crédit doit être vérifié avant d'être ajouté.", "info");
-}
-
-function bindAddFunds() {
-  $("#add-funds")?.addEventListener("click", openAddFunds);
-  $("#deposit-button")?.addEventListener("click", openAddFunds);
-}
-
-async function submitWithdrawal() {
-  if (!currentUser || !userData) {
-    showMessage("Connecte-toi avant de demander un retrait.", "error");
-    return;
-  }
-
-  const email = $("#withdraw-email")?.value.trim();
-  const firstName = $("#withdraw-firstname")?.value.trim();
-  const lastName = $("#withdraw-lastname")?.value.trim();
-  const credits = Number($("#withdraw-credits")?.value || 0);
-
-  if (!email || !firstName || !lastName || !Number.isFinite(credits) || credits <= 0) {
-    showMessage("Remplis tous les champs correctement.", "error");
-    return;
-  }
-
-  if (credits > Number(userData.credits || 0)) {
-    showMessage("Tu n'as pas assez de crédits.", "error");
-    return;
-  }
-
-  if (credits < 10000) {
-    showMessage("Le retrait minimum est de 10 000 crédits.", "error");
-    return;
-  }
-
-  try {
-    const euros = credits * 0.0003;
-
-    await addDoc(collection(db, "withdrawals"), {
-      uid: currentUser.uid,
-      email,
-      firstName,
-      lastName,
-      credits,
-      euros,
-      status: "pending",
-      createdAt: serverTimestamp()
-    });
-
-    userData.credits -= credits;
-    await saveUserData();
-    updateBalance();
-
-    showMessage(`Demande envoyée : ${formatEuro(euros)}. Elle doit être vérifiée.`, "success");
-  } catch (error) {
-    showMessage(error.message, "error");
-  }
-}
-
-function bindWithdrawal() {
-  $("#withdraw-submit")?.addEventListener("click", submitWithdrawal);
-  $("#withdraw-button")?.addEventListener("click", () => showPage("withdraw"));
-}
-
-function updateWithdrawalPreview() {
-  const credits = Number($("#withdraw-credits")?.value || 0);
-  const euros = credits * 0.0003;
-  setText("#withdraw-euros", formatEuro(euros));
-}
-
-function bindWithdrawalPreview() {
-  $("#withdraw-credits")?.addEventListener("input", updateWithdrawalPreview);
-}
-
-function debitCredits(amount) {
-  amount = Math.floor(Number(amount));
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    showMessage("Mise invalide.", "error");
-    return false;
-  }
-
-  if (!userData || Number(userData.credits || 0) < amount) {
-    showMessage("Tu n'as pas assez de crédits.", "error");
-    return false;
-  }
-
-  userData.credits -= amount;
-  updateBalance();
-  saveUserData().catch(error => showMessage(error.message, "error"));
-  return true;
-}
-
-async function creditCredits(amount) {
-  amount = Math.floor(Number(amount));
-  if (!Number.isFinite(amount) || amount <= 0 || !userData) return;
-
-  userData.credits += amount;
-  updateBalance();
-  await saveUserData();
-}
-
-function finishGame() {
-  gameState.active = false;
-  currentGame = null;
-}
-
-function setGameMessage(message) {
-  const el = $("#game-message");
-  if (el) el.textContent = message;
-}
-
-function setGameMultiplier(value) {
-  setText("#game-multiplier", `x${Number(value).toFixed(2)}`);
-}
-
-function setGameBet(value) {
-  setText("#game-bet", formatCredits(value));
-}
-
-function getBetAmount() {
-  const input = $("#bet-amount");
-  const amount = Number(input?.value || 0);
-  return Math.floor(amount);
-}
-
-function startGame(gameName) {
-  if (!currentUser || !userData) {
-    showMessage("Connecte-toi pour jouer.", "error");
-    return false;
-  }
-
-  if (gameState.active) {
-    showMessage("Une partie est déjà en cours.", "error");
-    return false;
-  }
-
-  const bet = getBetAmount();
-  if (!Number.isFinite(bet) || bet <= 0) {
-    showMessage("Entre une mise valide.", "error");
-    return false;
-  }
-
-  if (!debitCredits(bet)) return false;
-
-  currentGame = gameName;
-  gameState = {
-    active: true,
-    bet,
-    multiplier: 1,
-    winnings: 0,
-    game: gameName
-  };
-
-  setGameBet(bet);
-  setGameMultiplier(1);
-  setGameMessage("Partie en cours !");
-  showPage("game");
-  return true;
-}
-
-function winGame(multiplier) {
-  if (!gameState.active) return;
-
-  const payout = Math.floor(gameState.bet * multiplier);
-  gameState.winnings = payout;
-  gameState.multiplier = multiplier;
-
-  creditCredits(payout).catch(error => showMessage(error.message, "error"));
-  setGameMessage(`Gagné ! +${formatCredits(payout)} crédits`);
-  setGameMultiplier(multiplier);
-  finishGame();
-}
-
-function loseGame() {
-  if (!gameState.active) return;
-  setGameMessage("Perdu ! Tu as perdu ta mise.");
-  finishGame();
-}
-
-function cashoutGame() {
-  if (!gameState.active) return;
-  winGame(gameState.multiplier);
-}
-
-function bindGameButtons() {
-  $$("[data-start-game]").forEach(button => {
-    button.addEventListener("click", () => {
-      startGame(button.dataset.startGame);
-    });
-  });
-
-  $("#cashout")?.addEventListener("click", cashoutGame);
-  $("#game-back")?.addEventListener("click", () => {
-    if (gameState.active) {
-      showMessage("Tu ne peux pas quitter une partie en cours.", "error");
-      return;
-    }
-    showPage("games");
-  });
-}
-
-function randomInt(max) {
-  return Math.floor(Math.random() * max);
-}
-
-function randomChoice(items) {
-  return items[randomInt(items.length)];
-}
-
-/* =========================
-   COIN MINER
-========================= */
-
-const COIN_MINER_SIZE = 25;
-const COIN_MINER_MINES = 5;
-
-let coinMiner = {
-  revealed: [],
-  mines: [],
-  multiplier: 1,
-  safeCount: 0
-};
-
-function createCoinMinerGrid() {
-  const grid = $("#coin-miner-grid");
-  if (!grid) return;
-
-  grid.innerHTML = "";
-
-  coinMiner = {
-    revealed: [],
-    mines: [],
-    multiplier: 1,
-    safeCount: 0
-  };
-
-  while (coinMiner.mines.length < COIN_MINER_MINES) {
-    const position = randomInt(COIN_MINER_SIZE);
-    if (!coinMiner.mines.includes(position)) coinMiner.mines.push(position);
-  }
-
-  for (let i = 0; i < COIN_MINER_SIZE; i++) {
-    const tile = document.createElement("button");
-    tile.type = "button";
-    tile.className = "coin-tile";
-    tile.dataset.index = i;
-    tile.textContent = "?";
-    tile.addEventListener("click", () => revealCoinTile(i, tile));
-    grid.appendChild(tile);
-  }
-}
-
-function revealCoinTile(index, tile) {
-  if (!gameState.active || currentGame !== "coin-miner") return;
-  if (coinMiner.revealed.includes(index)) return;
-
-  coinMiner.revealed.push(index);
-
-  if (coinMiner.mines.includes(index)) {
-    tile.textContent = "💣";
-    tile.classList.add("mine");
-    $$(".coin-tile").forEach((el, i) => {
-      if (coinMiner.mines.includes(i)) {
-        el.textContent = "💣";
-        el.classList.add("mine");
-      }
-      el.disabled = true;
-    });
-    loseGame();
-    return;
-  }
-
-  coinMiner.safeCount++;
-  tile.textContent = "💎";
-  tile.classList.add("safe");
-
-  coinMiner.multiplier = 1 + coinMiner.safeCount * 0.25;
-  gameState.multiplier = coinMiner.multiplier;
-
-  setGameMultiplier(coinMiner.multiplier);
-  setGameMessage(`${coinMiner.safeCount} case(s) sûre(s). Encaisse quand tu veux.`);
-}
-
-function startCoinMiner() {
-  if (!startGame("coin-miner")) return;
-  createCoinMinerGrid();
-  setGameMessage("Clique sur les cases pour trouver les diamants.");
-}
-
-/* =========================
-   TOWER BUILDER
-========================= */
-
-let towerBuilder = {
-  height: 0,
-  maxHeight: 20,
-  moving: false,
-  blocks: []
-};
-
-function createTower() {
-  const tower = $("#tower");
-  if (!tower) return;
-
-  tower.innerHTML = "";
-  towerBuilder = {
-    height: 0,
-    maxHeight: 20,
-    moving: false,
-    blocks: []
-  };
-
-  const base = document.createElement("div");
-  base.className = "tower-block tower-base";
-  base.textContent = "🏠";
-  tower.appendChild(base);
-}
-
-function addTowerFloor() {
-  if (!gameState.active || currentGame !== "tower-builder") return;
-  if (towerBuilder.height >= towerBuilder.maxHeight) {
-    winGame(gameState.multiplier);
-    return;
-  }
-
-  towerBuilder.height++;
-  towerBuilder.blocks.push(towerBuilder.height);
-
-  const tower = $("#tower");
-  if (tower) {
-    const floor = document.createElement("div");
-    floor.className = "tower-block";
-    floor.textContent = "🏠";
-    floor.style.bottom = `${towerBuilder.height * 32}px`;
-    tower.appendChild(floor);
-  }
-
-  gameState.multiplier = 1 + towerBuilder.height * 0.2;
-  setGameMultiplier(gameState.multiplier);
-  setGameMessage(`${towerBuilder.height} étage(s) construit(s).`);
-}
-
-function towerFail() {
-  if (!gameState.active || currentGame !== "tower-builder") return;
-  loseGame();
-}
-
-function startTowerBuilder() {
-  if (!startGame("tower-builder")) return;
-  createTower();
-  setGameMessage("Construis la tour sans la faire tomber.");
-}
-
-/* =========================
-   CHICKEN ROAD
-========================= */
-
-let chickenRoad = {
-  step: 0,
-  maxSteps: 12,
-  tiles: []
-};
-
-function createChickenRoad() {
-  const road = $("#chicken-road");
-  if (!road) return;
-
-  road.innerHTML = "";
-  chickenRoad = {
-    step: 0,
-    maxSteps: 12,
-    tiles: []
-  };
-
-  const chicken = document.createElement("div");
-  chicken.className = "chicken-player";
-  chicken.textContent = "🐔";
-  road.appendChild(chicken);
-
-  for (let i = 0; i < chickenRoad.maxSteps; i++) {
-    const tile = document.createElement("div");
-    tile.className = "road-tile";
-    tile.textContent = "⬜";
-    tile.dataset.step = i;
-    road.appendChild(tile);
-    chickenRoad.tiles.push(tile);
-  }
-}
-
-function chickenRoadStep() {
-  if (!gameState.active || currentGame !== "chicken-road") return;
-
-  if (chickenRoad.step >= chickenRoad.maxSteps) {
-    winGame(gameState.multiplier);
-    return;
-  }
-
-  const isSafe = Math.random() > 0.22;
-  const tile = chickenRoad.tiles[chickenRoad.step];
-
-  if (!isSafe) {
-    tile.textContent = "🕳️";
-    tile.classList.add("hole");
-    loseGame();
-    return;
-  }
-
-  tile.textContent = "🐔";
-  tile.classList.add("safe");
-  chickenRoad.step++;
-
-  gameState.multiplier = 1 + chickenRoad.step * 0.3;
-  setGameMultiplier(gameState.multiplier);
-  setGameMessage(`Étape ${chickenRoad.step} réussie. Encaisse ou continue.`);
-}
-
-function startChickenRoad() {
-  if (!startGame("chicken-road")) return;
-  createChickenRoad();
-  setGameMessage("Avance sur la route sans tomber dans un égout.");
-}
-
-/* =========================
-   GAME START CONTROLS
-========================= */
-
-function bindMainGameStarts() {
-  $("#start-coin-miner")?.addEventListener("click", startCoinMiner);
-  $("#start-tower-builder")?.addEventListener("click", startTowerBuilder);
-  $("#start-chicken-road")?.addEventListener("click", startChickenRoad);
-
-  $("#coin-miner-next")?.addEventListener("click", () => {
-    const tile = $$(".coin-tile").find(el => !el.disabled && el.textContent === "?");
-    if (tile) tile.click();
-  });
-
-  $("#tower-build")?.addEventListener("click", addTowerFloor);
-  $("#tower-fail")?.addEventListener("click", towerFail);
-  $("#chicken-next")?.addEventListener("click", chickenRoadStep);
-}
-
-/* =========================
-   SVG / GAME ART
-========================= */
-
-const CAR = (c, d) => `<svg viewBox="0 0 120 60" width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="20" width="96" height="28" rx="8" fill="${c}"/><path d="M30 20 L42 7 H80 L94 20" fill="${d}"/><circle cx="32" cy="48" r="8" fill="#222"/><circle cx="88" cy="48" r="8" fill="#222"/></svg>`;
-
-const TRK = (c, d) => `<svg viewBox="0 0 120 60" width="120" height="60" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="18" width="104" height="30" rx="7" fill="${c}"/><path d="M26 18 L40 5 H82 L96 18" fill="${d}"/><circle cx="30" cy="48" r="8" fill="#222"/><circle cx="90" cy="48" r="8" fill="#222"/></svg>`;
-
-/* =========================
-   PROFILE / USER DISPLAY
-========================= */
-
-function updateProfileDetails() {
-  if (!userData || !currentUser) return;
-
-  setText("#profile-name", userData.displayName || currentUser.displayName || "Joueur");
-  setText("#profile-email", currentUser.email || "Compte invité");
-  setText("#profile-credits", formatCredits(userData.credits));
-  setText("#profile-euros", formatEuro(getEuroFromCredits(userData.credits)));
-}
-
-function bindProfile() {
-  $("#profile-open")?.addEventListener("click", () => showPage("profile"));
-  $("#profile-close")?.addEventListener("click", () => showPage("home"));
-}
-
-/* =========================
-   MODALS
-========================= */
-
-function openModal(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.style.display = "flex";
-}
-
-function closeModal(id) {
-  const modal = document.getElementById(id);
-  if (modal) modal.style.display = "none";
-}
-
-function bindModals() {
-  $$("[data-open-modal]").forEach(button => {
-    button.addEventListener("click", () => openModal(button.dataset.openModal));
-  });
-
-  $$("[data-close-modal]").forEach(button => {
-    button.addEventListener("click", () => closeModal(button.dataset.closeModal));
-  });
-
-  $$(".modal").forEach(modal => {
-    modal.addEventListener("click", event => {
-      if (event.target === modal) modal.style.display = "none";
-    });
-  });
-}
-
-/* =========================
-   RESPONSIVE MENU
-========================= */
-
-function bindMobileMenu() {
-  $("#menu-toggle")?.addEventListener("click", () => {
-    $("#main-menu")?.classList.toggle("open");
-  });
-}
-
-/* =========================
-   BUTTONS / LINKS
-========================= */
-
-function bindGeneralButtons() {
-  $("#home-button")?.addEventListener("click", () => showPage("home"));
-  $("#games-button")?.addEventListener("click", () => showPage("games"));
-  $("#profile-button")?.addEventListener("click", () => showPage("profile"));
-  $("#deposit-open")?.addEventListener("click", () => showPage("deposit"));
-  $("#withdraw-open")?.addEventListener("click", () => showPage("withdraw"));
-
-  $("#deposit-confirm")?.addEventListener("click", openAddFunds);
-  $("#withdraw-confirm")?.addEventListener("click", submitWithdrawal);
-}
-
-/* =========================
-   AUTH STATE
-========================= */
-
-function watchAuth() {
-  if (unsubscribeAuth) unsubscribeAuth();
-
-  unsubscribeAuth = onAuthStateChanged(auth, async user => {
-    currentUser = user;
-
-    if (!user) {
-      userData = null;
-      showLoggedOutUI();
-      return;
-    }
-
-    try {
-      await loadUserData(user);
-      showLoggedInUI(user);
-      updateProfileDetails();
-    } catch (error) {
-      showMessage("Impossible de charger ton compte : " + error.message, "error");
-    }
-  });
-}
-
-/* =========================
-   INITIALIZATION
-========================= */
-
-function initializePexiPlay() {
-  bindAuthButtons();
-  bindNavigation();
-  bindAddFunds();
-  bindWithdrawal();
-  bindWithdrawalPreview();
-  bindGameButtons();
-  bindMainGameStarts();
-  bindProfile();
-  bindModals();
-  bindMobileMenu();
-  bindGeneralButtons();
-
-  showPage("home");
-  watchAuth();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializePexiPlay);
-} else {
-  initializePexiPlay();
-}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PEXI PLAY</title>
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,sans-serif;background:#10162b;color:white;min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:#182044;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-size:21px;font-weight:950;letter-spacing:1px}
+button{border:0;border-radius:12px;padding:12px 16px;background:#344477;color:white;font-weight:800;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+input{width:100%;padding:12px;border:1px solid #53639b;border-radius:9px;background:#222b52;color:white;font:inherit}
+.hidden{display:none!important}
+main{max-width:850px;margin:auto;padding:18px}
+.panel{background:#182044;border:1px solid #344477;border-radius:17px;padding:18px;margin:14px 0}
+h1,h2{text-align:center;margin:12px 0 18px}
+h3{margin:10px 0}
+p{line-height:1.5}
+.muted{opacity:.7;font-size:13px}
+button.primary{background:linear-gradient(#34d399,#059669);color:#052e16}
+button.gold{background:linear-gradient(#fcd34d,#d97706);color:#422006}
+button.blue{background:linear-gradient(#60a5fa,#2563eb)}
+button.red{background:#b91c1c}
+button.white{background:#fff;color:#222}
+.full{width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid-games{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.game-card{min-height:125px;text-align:left;font-size:20px;padding:20px}
+.game-card span{display:block;font-size:35px;margin-bottom:8px}
+.game-card small{display:block;font-size:12px;font-weight:400;opacity:.8}
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:6px;font-size:14px;font-weight:700}
+.balance{color:#facc15;font-weight:900}
+#notifications{position:fixed;top:72px;right:14px;z-index:30;width:min(390px,calc(100% - 28px));display:grid;gap:10px}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:15px;border-radius:17px;background:#f8fafc;color:#111827;box-shadow:0 12px 35px #0008;animation:slide .4s ease-out}
+.notice-logo{width:42px;height:42px;flex:none;border-radius:12px;background:#182044;color:#facc15;display:grid;place-items:center;font-weight:1000}
+.notice strong{display:block;margin-bottom:4px}
+.notice p{font-size:13px}
+@keyframes slide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.tile-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:15px 0}
+.tile{aspect-ratio:1;font-size:22px;padding:4px;background:#a16207}
+.tile.safe{background:#047857}
+.tile.mine{background:#991b1b}
+.road{display:flex;gap:5px;overflow:auto;padding:12px;background:#292f3e;border-radius:12px}
+.road div{min-width:52px;height:90px;display:grid;place-items:center;background:#3f6212;border-radius:8px;font-size:24px}
+.tower{height:300px;display:flex;flex-direction:column-reverse;align-items:center;justify-content:flex-start;gap:3px;overflow:hidden;background:linear-gradient(#172554,#7c2d12);padding:10px}
+.floor{width:110px;height:22px;background:#b45309;border:2px solid #fde68a;border-radius:3px}
+.request{padding:14px;margin:10px 0;border-radius:12px;background:#222b52}
+.request p{font-size:14px;margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:9px;border-bottom:1px solid #344477;text-align:left}
+.table-wrap{overflow:auto}
+#auth{max-width:420px;margin:35px auto}
+#game-area{text-align:center}
+@media(max-width:480px){header{padding:10px}.brand{font-size:17px}main{padding:10px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">PEXI PLAY</div>
+  <div class="row">
+    <span>💰 <span id="balance" class="balance">0</span></span>
+    <button id="profile-btn">Profil</button>
+  </div>
+</header>
+
+<div id="notifications"></div>
+
+<main>
+  <section id="auth" class="panel">
+    <h1>Bienvenue sur PEXI PLAY</h1>
+    <p class="muted" style="text-align:center;margin-bottom:16px">Connecte-toi pour accéder aux jeux.</p>
+    <button id="google-login" class="white full"><b>🌐 Continuer avec Google</b></button>
+    <p id="auth-message" class="muted" style="margin-top:12px;text-align:center"></p>
+  </section>
+
+  <section id="home" class="hidden">
+    <h1>Choisis ton jeu</h1>
+    <div class="panel form">
+      <label>Mise en crédits
+        <input id="bet" type="number" min="1" value="100">
+      </label>
+    </div>
+    <div class="grid-games">
+      <button class="game-card" data-game="mines"><span>🪙</span>Coin Miner<small>Trouve les pièces, évite les bombes</small></button>
+      <button class="game-card" data-game="tower"><span>🏗️</span>Tower Builder<small>Construis la tour le plus haut possible</small></button>
+      <button class="game-card" data-game="chicken"><span>🐔</span>Chicken Road<small>Traverse la route sans tomber</small></button>
+    </div>
+  </section>
+
+  <section id="game-area" class="hidden panel">
+    <h2 id="game-title">Jeu</h2>
+    <p>Multiplicateur : <b id="multiplier" class="balance">x1.00</b></p>
+    <p id="game-message">Bonne chance !</p>
+    <div id="game-content"></div>
+    <div class="row" style="justify-content:center;margin-top:15px">
+      <button id="advance" class="primary">Jouer</button>
+      <button id="cashout" class="gold">Encaisser</button>
+    </div>
+    <button id="back-home" class="full" style="margin-top:12px">Retour aux jeux</button>
+  </section>
+
+  <section id="profile" class="hidden">
+    <h1>Mon profil</h1>
+    <div class="panel">
+      <p id="player-email"></p>
+      <p>Solde : <b id="profile-balance" class="balance"></b></p>
+      <button id="withdraw-open" class="primary full" style="margin-top:14px">Demander un retrait</button>
+      <button id="logout" class="red full" style="margin-top:10px">Déconnexion</button>
+    </div>
+    <div class="panel">
+      <h3>Mes notifications</h3>
+      <div id="my-notifications">Aucune notification pour le moment.</div>
+    </div>
+    <button id="profile-back" class="full">Retour</button>
+  </section>
+
+  <section id="withdraw-section" class="hidden">
+    <h1>Demande de retrait</h1>
+    <div class="panel">
+      <p class="balance" style="text-align:center;margin-bottom:15px">10 000 crédits = 3 €</p>
+      <form id="withdraw-form" class="form">
+        <label>Nom<input name="surname" required maxlength="60" placeholder="Ton nom"></label>
+        <label>Prénom<input name="firstname" required maxlength="60" placeholder="Ton prénom"></label>
+        <label>Adresse e-mail PayPal<input name="email" type="email" required placeholder="nom@exemple.com"></label>
+        <label>Crédits à retirer<input name="credits" type="number" min="10000" step="1000" value="10000" required></label>
+        <p>Montant estimé : <b id="withdraw-value" class="balance">3 €</b></p>
+        <button class="primary full" type="submit">Envoyer ma demande</button>
+      </form>
+      <p id="withdraw-message" class="muted" style="margin-top:10px"></p>
+    </div>
+    <button id="withdraw-back" class="full">Retour au profil</button>
+  </section>
+
+  <section id="admin" class="hidden">
+    <h1>Tableau de bord administrateur</h1>
+    <div class="panel">
+      <p>Connecté en administrateur : <b>pc2alex.les@gmail.com</b></p>
+      <p class="muted">Les demandes en attente apparaissent ci-dessous.</p>
+    </div>
+    <div class="panel">
+      <h3>Demandes de retrait</h3>
+      <div id="admin-requests">Chargement des demandes…</div>
+    </div>
+    <button id="admin-back" class="full">Retour à l'accueil</button>
+  </section>
+</main>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
