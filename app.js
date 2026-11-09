@@ -40,9 +40,13 @@ function setup(id, extra) {
 }
 
 /* ---------- COIN MINER ---------- */
+const COIN = '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#facc15" stroke="#a16207" stroke-width="3"/><circle cx="20" cy="20" r="11" fill="none" stroke="#ca8a04" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="16" font-weight="800" fill="#a16207">$</text></svg>';
+const GEM = '<svg viewBox="0 0 40 40"><path d="M8 15L14 7H26L32 15L20 34Z" fill="#38bdf8" stroke="#0369a1" stroke-width="2"/><path d="M8 15H32M14 7L20 15L26 7M20 15V34" stroke="#bae6fd" stroke-width="1.5" fill="none"/></svg>';
+const BOMB = '<svg viewBox="0 0 40 40"><circle cx="19" cy="23" r="12" fill="#1f2937"/><path d="M26 13L31 8" stroke="#a16207" stroke-width="3"/><circle cx="32" cy="7" r="3" fill="#f97316"/><circle cx="15" cy="19" r="3" fill="#fff6"/></svg>';
+
 function initMines() {
   const g = setup('#mines', '<label>Mines<select class="n">' + [1, 3, 5, 10, 20].map(n => `<option>${n}</option>`).join('') + '</select></label>');
-  g.q('.stage').innerHTML = '<div class="grid"></div>';
+  g.q('.stage').innerHTML = '<div class="neon">COIN MINER</div><div class="felt"><div class="grid"></div></div>';
   let on = false, b, k, s, m;
   const T = [...Array(25)].map((_, i) => {
     const c = document.createElement('button');
@@ -51,7 +55,7 @@ function initMines() {
   });
   const mu = n => { let r = .97; for (let i = 0; i < n; i++) r *= (25 - i) / (25 - m - i); return r; };
   const reveal = () => T.forEach((c, i) => {
-    if (!c.classList.contains('ok') && !c.classList.contains('bad')) { c.textContent = b.has(i) ? '💣' : '💎'; c.classList.add('dim'); }
+    if (!c.classList.contains('ok') && !c.classList.contains('bad')) { c.innerHTML = b.has(i) ? BOMB : GEM; c.classList.add('dim'); }
     c.disabled = true;
   });
   const cash = () => {
@@ -61,15 +65,15 @@ function initMines() {
   function pick(i) {
     if (!on) return;
     const c = T[i];
-    if (b.has(i)) { on = false; c.textContent = '💥'; c.classList.add('bad'); reveal(); g.msg('Boom ! Perdu'); g.run(false); return; }
-    c.textContent = '🪙'; c.classList.add('ok'); c.disabled = true; k++; g.mult(mu(k));
+    if (b.has(i)) { on = false; c.innerHTML = BOMB; c.classList.add('bad'); reveal(); g.msg('Boom ! Perdu'); g.run(false); return; }
+    c.innerHTML = COIN; c.classList.add('ok'); c.disabled = true; k++; g.mult(mu(k));
     if (k == 25 - m) cash();
   }
   g.q('.go').onclick = () => {
     s = g.take(); if (!s) return;
     m = +g.q('.n').value; b = new Set(); while (b.size < m) b.add(Math.random() * 25 | 0);
     k = 0; on = true; g.mult(1); g.run(true);
-    T.forEach(c => { c.textContent = ''; c.className = 'tile'; c.disabled = false; });
+    T.forEach(c => { c.innerHTML = ''; c.className = 'tile'; c.disabled = false; });
   };
   g.q('.out').onclick = () => { if (on && k > 0) cash(); };
   stop = () => { if (on) { setBal(bal + s); on = false; } };
@@ -77,49 +81,64 @@ function initMines() {
 
 /* ---------- TOWER BUILDER ---------- */
 function initTower() {
-  const g = setup('#tower', '<button class="drop">⬇ Poser le bloc</button>');
-  g.q('.stage').innerHTML = '<div class="tw"><div class="world"></div></div>';
-  const W = 300, H = 26, wd = g.q('.world'), tw = g.q('.tw');
+  const g = setup('#tower', '<button class="drop">Poser le bloc</button>');
+  g.q('.stage').innerHTML = '<div class="tw"><div class="mast"></div><div class="city"></div><div class="world"></div><div class="jib"><b class="trl"></b></div></div>';
+  const W = 300, H = 26, wd = g.q('.world'), tw = g.q('.tw'), cy = g.q('.city'), trl = g.q('.trl');
+  let x = 0, h = '';
+  while (x < W) {
+    const bw = 28 + Math.random() * 26 | 0, hs = Math.random() < .35;
+    h += `<div class="${hs ? 'hs' : 'sk'}" style="left:${x}px;width:${bw}px;height:${hs ? 50 + Math.random() * 30 | 0 : 70 + Math.random() * 130 | 0}px"></div>`;
+    x += bw + 2;
+  }
+  cy.innerHTML = h;
   let on = false, n, x0, w0, px, s, cur, raf, t0;
   const mu = k => Math.pow(1.22, k);
-  const pal = ['#c2410c', '#b45309', '#9a3412', '#be123c', '#a16207'];
+  const pal = ['#e9a15b', '#d9776a', '#e8c07d', '#c98b6b', '#cf6f77'];
   const wins = wi => '<i></i>'.repeat(Math.max(1, Math.floor(wi / 34)));
-  const blk = (x, wi, fl) => {
+  const blk = (xx, wi, fl) => {
     const d = document.createElement('div'); d.className = 'bl';
-    d.style.cssText = `left:${x}px;width:${wi}px;bottom:${fl * H}px;background:${pal[fl % 5]}`;
+    d.style.cssText = `left:${xx}px;width:${wi}px;bottom:${fl * H}px;background-color:${pal[fl % 5]}`;
     d.innerHTML = wins(wi); wd.append(d); return d;
   };
+  const pop = (a, b, big) => {
+    const d = document.createElement('div'); d.className = 'pop' + (big ? ' big' : '');
+    d.innerHTML = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`; tw.append(d); setTimeout(() => d.remove(), 1100);
+  };
+  const sink = () => { const t = `translateY(${Math.max(0, n - 8) * H}px)`; wd.style.transform = t; cy.style.transform = t; };
   const loop = () => {
     px = (W - w0) * (.5 + .5 * Math.sin((performance.now() - t0) * (.003 + n * .0003)));
-    cur.style.left = px + 'px'; raf = requestAnimationFrame(loop);
+    cur.style.left = px + 'px'; trl.style.left = (px + w0 / 2 - 9) + 'px'; raf = requestAnimationFrame(loop);
   };
   const spawn = () => { cur = blk(0, w0, n + 1); cur.insertAdjacentHTML('beforeend', '<b class="cb"></b>'); t0 = performance.now(); loop(); };
   const cash = rm => {
     on = false; cancelAnimationFrame(raf); if (rm) cur.remove();
-    const w = s * mu(n); setBal(bal + w); g.msg('Gagné : +' + w.toFixed(2) + ' crédits'); g.run(false);
+    const w = s * mu(n); setBal(bal + w); g.msg('Gagné : +' + w.toFixed(2) + ' crédits');
+    pop('+' + +w.toFixed(2), 'GAGNÉ !', true); g.run(false);
   };
   const drop = () => {
     if (!on) return;
     cancelAnimationFrame(raf);
-    if (Math.abs(px - x0) < 5) px = x0;
+    const perfect = Math.abs(px - x0) < 5;
+    if (perfect) px = x0;
     const o = w0 - Math.abs(px - x0);
     if (o < 6) {
-      on = false; const cb = cur.querySelector('.cb'); if (cb) cb.remove(); cur.style.transition = 'transform .7s,opacity .7s';
+      on = false; const cb = cur.querySelector('.cb'); if (cb) cb.remove();
+      cur.style.transition = 'transform .7s,opacity .7s';
       cur.style.transform = 'translateY(300px) rotate(25deg)'; cur.style.opacity = 0;
       g.msg('Raté ! La tour s\'effondre'); g.run(false); return;
     }
     const nl = Math.max(px, x0);
     cur.style.left = nl + 'px'; cur.style.width = o + 'px'; cur.innerHTML = wins(o);
     x0 = nl; w0 = o; n++; g.mult(mu(n));
+    pop('+' + +(s * (mu(n) - mu(n - 1))).toFixed(2), perfect ? 'PARFAIT !' : '', perfect);
     if (n >= 12) { cash(false); return; }
-    wd.style.transform = `translateY(${Math.max(0, n - 8) * H}px)`;
-    spawn();
+    sink(); spawn();
   };
   tw.onclick = drop; g.q('.drop').onclick = drop;
   g.q('.go').onclick = () => {
     s = g.take(); if (!s) return;
-    wd.innerHTML = ''; wd.style.transform = '';
-    n = 0; x0 = 80; w0 = 140; const bs = blk(x0, w0, 0); bs.classList.add('base'); bs.innerHTML = '<i></i><i class="dr"></i><i></i>';
+    wd.innerHTML = '<div class="gnd"></div>'; n = 0; sink();
+    x0 = 80; w0 = 140; const bs = blk(x0, w0, 0); bs.classList.add('base'); bs.innerHTML = '<i></i><i class="dr"></i><i></i>';
     on = true; g.mult(1); g.run(true); spawn();
   };
   g.q('.out').onclick = () => { if (on && n > 0) cash(true); };
