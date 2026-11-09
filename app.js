@@ -124,17 +124,25 @@ function initTower() {
 }
 
 /* ---------- CHICKEN ROAD ---------- */
+const MH = '<svg class="mh" viewBox="0 0 80 80"><circle cx="40" cy="40" r="38" fill="#2f3541"/><circle cx="40" cy="40" r="33" fill="#7b8494"/><circle cx="40" cy="40" r="26" fill="none" stroke="#4b5563" stroke-width="3"/><path d="M40 14V66M14 40H66M22 22L58 58M58 22L22 58" stroke="#5b6472" stroke-width="3"/></svg>';
+const CH = '<svg viewBox="0 0 80 90" style="display:block"><path d="M30 68v16M52 68v16M24 86h14M46 86h14" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M18 50Q2 44 6 26Q18 30 24 42z" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="40" cy="52" rx="26" ry="22" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="32" cy="56" rx="12" ry="13" fill="#e5e7eb" stroke="#cbd5e1" stroke-width="2"/><circle cx="52" cy="28" r="15" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><circle cx="46" cy="12" r="5" fill="#ef4444"/><circle cx="54" cy="10" r="5" fill="#ef4444"/><circle cx="61" cy="14" r="4" fill="#ef4444"/><path d="M65 25L78 30L65 35z" fill="#f59e0b"/><ellipse cx="63" cy="40" rx="3" ry="5" fill="#ef4444"/><circle cx="57" cy="25" r="2.5" fill="#111"/></svg>';
+const FIRE = '<svg class="fire" viewBox="0 0 80 100"><path d="M40 98C10 90 8 60 28 40c0 14 8 16 10 6C44 30 38 16 46 2c14 20 34 36 26 62C68 86 56 96 40 98z" fill="#f97316"/><path d="M40 98C24 92 24 76 36 62c2 8 6 8 8 2 4 8 10 14 6 24-2 6-6 9-10 10z" fill="#fde047"/></svg>';
+const CAR = (c, d) => `<svg class="car" viewBox="0 0 40 80" style="animation-duration:${d + 2}s;animation-delay:-${d}s"><rect x="4" y="4" width="32" height="72" rx="10" fill="${c}"/><rect x="9" y="18" width="22" height="14" rx="3" fill="#bfdbfe"/><rect x="9" y="50" width="22" height="9" rx="3" fill="#93c5fd"/><rect x="0" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="0" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="54" width="5" height="14" rx="2" fill="#111"/></svg>`;
+
 function initChicken() {
-  const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".08">Facile</option><option value=".15">Moyen</option><option value=".25">Difficile</option><option value=".4">Hardcore</option></select></label><button class="adv" disabled>🐔 Avancer</button>');
+  const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".08">Facile</option><option value=".15">Moyen</option><option value=".25">Difficile</option><option value=".4">Hardcore</option></select></label><button class="adv" disabled>Avancer</button>');
   g.q('.stage').innerHTML = '<div class="road"></div>';
   const rd = g.q('.road'), adv = g.q('.adv'), N = 15, ch = document.createElement('div');
+  const cols = ['#dc2626', '#2563eb', '#eab308', '#16a34a', '#f8fafc'];
   let on = false, k = 0, p = +g.q('.d').value, s, L = [];
   const mu = i => .97 / Math.pow(1 - p, i);
+  const place = l => { l.append(ch); ch.classList.remove('hop'); void ch.offsetWidth; ch.classList.add('hop'); };
   const build = () => {
-    rd.innerHTML = ''; L = []; ch.textContent = '🐔';
+    rd.innerHTML = ''; L = []; ch.className = 'ch'; ch.innerHTML = CH;
     for (let i = 0; i <= N; i++) {
-      const d = document.createElement('div'); d.className = 'ln';
-      d.innerHTML = i ? `<span class="lm">x${mu(i).toFixed(2)}</span><span class="mh">⚫</span>` : '<span class="lm">Départ</span>';
+      const d = document.createElement('div'); d.className = 'ln' + (i ? '' : ' st');
+      d.innerHTML = (i % 3 == 1 ? CAR(cols[i % 5], Math.random() * 3 + 1) : '') + (i ? MH : '') +
+        `<span class="lm">${i ? 'x' + mu(i).toFixed(2) : 'DÉPART'}</span>`;
       rd.append(d); L.push(d);
     }
     L[0].append(ch); rd.scrollLeft = 0;
@@ -147,12 +155,12 @@ function initChicken() {
   adv.onclick = () => {
     if (!on) return;
     if (Math.random() < p) {
-      on = false; L[k + 1].querySelector('.mh').textContent = '🚗💥';
-      ch.textContent = '🍗'; L[k + 1].append(ch);
-      g.msg('Écrasée ! Perdu'); adv.disabled = true; g.run(false); return;
+      on = false; L[k + 1].insertAdjacentHTML('beforeend', FIRE);
+      ch.classList.add('dead'); place(L[k + 1]);
+      g.msg('Grillée par les flammes ! Perdu'); adv.disabled = true; g.run(false); return;
     }
-    k++; L[k].classList.add('done'); L[k].querySelector('.mh').textContent = '✅'; L[k].append(ch);
-    g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 90, behavior: 'smooth' });
+    k++; L[k].classList.add('done'); place(L[k]);
+    g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 120, behavior: 'smooth' });
     if (k == N) cash();
   };
   g.q('.go').onclick = () => {
