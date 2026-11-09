@@ -37,23 +37,29 @@ input,select{padding:8px;border-radius:8px;border:0;width:130px;background:#222b
 .tile.dim{opacity:.55}
 .tw{position:relative;width:300px;height:400px;margin:auto;overflow:hidden;background:linear-gradient(#1e3a8a,#10162b);border-radius:12px;cursor:pointer}
 .world{position:absolute;left:0;bottom:0;width:300px;height:100%;transition:transform .3s}
-.bl{position:absolute;height:26px;background:#f59e0b;border:2px solid #fff4;border-radius:4px}
-.bl.base{background:#78716c}
-.road{position:relative;display:flex;overflow-x:auto;background:#2b2e36;border-radius:12px;border:3px solid #111827}
-.ln{position:relative;flex:0 0 92px;height:240px;overflow:hidden;border-right:3px dashed rgba(255,255,255,.3);background:#2b2e36}
-.ln.st{background:#3f6212;border-right:4px solid #fff}
-.ln.st .lm{top:auto;bottom:8px;background:none}
-.mh{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;z-index:1}
-.lm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;font-weight:800;font-size:15px;color:#fde047;text-shadow:0 1px 3px #000;background:#0007;padding:2px 6px;border-radius:8px;white-space:nowrap}
-.ln.done .lm{color:#4ade80}
-.ch{position:absolute;left:50%;margin-left:-30px;top:50px;width:60px;z-index:3}
+.bl{position:absolute;height:26px;display:flex;align-items:center;justify-content:space-around;padding:0 4px;border:2px solid #0004;border-bottom:4px solid #0006;border-radius:3px}
+.bl i{width:13px;height:13px;flex:none;background:#fde68a;border:2px solid #431407;border-radius:2px}
+.bl i.dr{height:20px;width:16px;background:#451a03;align-self:flex-end}
+.bl.base{background:#78716c!important}
+.cb{position:absolute;left:50%;bottom:100%;width:2px;height:600px;background:#e5e7eb}
+.road{position:relative;display:flex;overflow-x:auto;background:radial-gradient(#fff1 1px,transparent 1px) 0 0/7px 7px,#2b2e36;border-radius:14px;border:4px solid #111827;box-shadow:inset 0 0 30px #000a}
+.ln{position:relative;flex:0 0 92px;height:250px;overflow:hidden;border-right:3px dashed rgba(255,255,255,.28)}
+.ln.st{background:linear-gradient(90deg,#3f6212,#4d7c0f);border-right:5px solid #fff}
+.ln.st .lm{top:auto;bottom:10px;transform:translateX(-50%);background:#0008;color:#fff;box-shadow:none}
+.ln.gl{background:radial-gradient(circle,#854d0e77,transparent 70%)}
+.mh{position:absolute;left:50%;top:50%;width:78px;height:78px;margin:-39px 0 0 -39px;z-index:1}
+.lm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;font-weight:800;font-size:14px;color:#422006;background:linear-gradient(#fde047,#f59e0b);padding:3px 8px;border-radius:12px;box-shadow:0 2px 4px #0009;white-space:nowrap}
+.ln.done .lm{background:linear-gradient(#86efac,#16a34a);color:#052e16}
+.ch{position:absolute;left:50%;margin-left:-32px;top:38px;width:64px;z-index:5}
 .hop{animation:hop .35s}
 @keyframes hop{50%{transform:translateY(-26px)}}
 .ch.dead svg{filter:grayscale(1) brightness(.3);transform:rotate(80deg)}
-.fire{position:absolute;left:50%;margin-left:-40px;top:20px;width:80px;z-index:4;transform-origin:bottom;animation:fl .25s infinite alternate}
+.fire{position:absolute;left:50%;margin-left:-40px;top:22px;width:80px;z-index:6;transform-origin:bottom;animation:fl .25s infinite alternate}
 @keyframes fl{to{transform:scale(1.15,.9)}}
-.car{position:absolute;left:50%;margin-left:-18px;width:36px;top:-90px;animation:drive 3s linear infinite}
-@keyframes drive{to{top:250px}}
+.car{position:absolute;left:50%;margin-left:-19px;width:38px;top:-90px;z-index:3;animation:drive 3s linear infinite}
+@keyframes drive{to{top:260px}}
+.bar{position:absolute;left:0;top:6px;width:100%;z-index:3;animation:bd .4s ease-out}
+@keyframes bd{from{transform:translateY(-70px);opacity:0}}
 </style>
 </head>
 <body>
