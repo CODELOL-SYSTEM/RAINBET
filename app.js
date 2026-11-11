@@ -32,11 +32,11 @@ const fmt = v => {
 };
 const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
-let bal = 1000, stop = () => {};
-try { const sv = localStorage.getItem('mj_bal'); if (sv !== null) bal = Math.max(1, +sv || 1); } catch (e) {}
+let bal = 0, stop = () => {};
+try { const sv = localStorage.getItem('mj_bal'); if (sv !== null) bal = Math.max(0, +sv || 0); } catch (e) {}
 
 function setBal(v) {
-  bal = Math.max(0, Math.round(v * 100) / 100);
+  bal = Math.max(0, Math.floor(v));
   $('#bal').textContent = fmt(bal);
   try { localStorage.setItem('mj_bal', bal); } catch (e) {}
   if (window.PEXI && window.PEXI.user) window.PEXI.saveBalance(bal).catch(err => console.error(err));
@@ -75,6 +75,7 @@ function setup(id, extra) {
       q('.go').disabled = v; q('.out').disabled = !v;
     },
     take: () => {
+      if (!auth.currentUser) { alert('Connecte-toi pour jouer.'); setPage('wallet'); return 0; }
       const s = Math.floor(+q('.stk').value);
       if (!(s >= 1) || s > bal) { q('.msg').textContent = 'Crédits insuffisants'; return 0; }
       setBal(bal - s); q('.msg').textContent = ''; return s;
@@ -275,9 +276,9 @@ function drawIt(c, x, y, r, l, sq, age) {
 
 function initMerge() {
   const el = $('#merge');
-  el.innerHTML = '<div class="box"><div class="mtop"><b id="msc">0</b><span><button data-s="0" class="on">Fruit Merge</button><button data-s="1">Squishie Merge</button></span></div><canvas id="mc" width="360" height="540"></canvas><div class="msg">Touche l\'écran pour lâcher. Deux pareils fusionnent !</div></div>';
+  el.innerHTML = '<div class="box"><div class="betbar"><label>Mise <input id="mergeBet" type="number" min="1" value="10"></label><button id="mergeStart">MISER ET JOUER</button><b id="mergeState">En attente de mise</b></div><div class="mtop"><b id="msc">0</b><span><button data-s="0" class="on">Fruit Merge</button><button data-s="1">Squishie Merge</button></span></div><canvas id="mc" width="360" height="540"></canvas><div class="msg">Touche l\'écran pour lâcher. Deux pareils fusionnent !</div></div>';
   const cv = $('#mc'), c = cv.getContext('2d'), W = 360, H = 540, LINE = 90;
-  let it, score, next, aim = W / 2, cd, over, danger, skin = 0, raf;
+  let it, score, next, aim = W / 2, cd, over, danger, skin = 0, raf, stake = 0, active = false;
   const rnd = () => Math.random() * 4 | 0;
   const reset = () => { it = []; score = 0; next = rnd(); cd = 0; over = 0; danger = 0; $('#msc').textContent = 0; };
   const add = (x, y, l) => it.push({ x, y, vx: 0, vy: 0, l, r: R[l], age: 0 });
@@ -307,7 +308,7 @@ function initMerge() {
     }
     it = it.filter(a => !a.dead);
     danger = it.some(a => a.age > 90 && a.y - a.r < LINE && Math.abs(a.vy) < 1) ? danger + 1 : 0;
-    if (danger > 120) over = 1;
+    if (danger > 120) { over = 1; if(active){const gain=Math.floor(stake*(1+score/500));setBal(bal+gain);$('#mergeState').textContent='Gain : '+fmt(gain)+' pièces';active=false;} }
   }
   function draw() {
     c.clearRect(0, 0, W, H);
@@ -323,7 +324,7 @@ function initMerge() {
   cv.onpointermove = px;
   cv.onpointerdown = px;
   cv.onpointerup = e => {
-    px(e); if (over) { reset(); return; }
+    px(e); if (!active) return; if (over) { reset(); active=false; return; }
     if (cd > 0) return;
     add(Math.max(R[next], Math.min(W - R[next], aim)), 40, next); next = rnd(); cd = 35;
   };
@@ -331,7 +332,7 @@ function initMerge() {
     skin = +b.dataset.s; el.querySelectorAll('[data-s]').forEach(x => x.classList.toggle('on', x == b)); bg();
   });
   const loop = () => { step(); draw(); raf = requestAnimationFrame(loop); };
-  reset(); bg(); loop();
+  reset(); bg(); $('#mergeStart').onclick=()=>{if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#mergeBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}stake=v;setBal(bal-v);active=true;$('#mergeState').textContent='Partie en cours';reset();}; loop();
   stop = () => cancelAnimationFrame(raf);
 }
 
@@ -339,10 +340,10 @@ function initMerge() {
 const WL = 'CHAT CHIEN LAPIN POULE VACHE CHEVAL RENARD TIGRE PANDA ZEBRE LION SINGE OURS LOUP CERF PIZZA FRAISE CITRON BANANE POMME CERISE MELON TOMATE CAROTTE BOUGIE TABLE CHAISE LIVRE STYLO CLAVIER ECRAN SOURIS VOITURE AVION BATEAU TRAIN VELO MOTO SOLEIL NUAGE ETOILE LUNE PLAGE FORET RIVIERE MONTAGNE JARDIN FLEUR ARBRE FROMAGE CHOCOLAT GATEAU BONBON PAIN LAIT ROBOT PIRATE DRAGON FUSEE GUITARE PIANO TAMBOUR CINEMA MUSIQUE ECOLE MAISON CHATEAU PONT CLOWN'.split(' ');
 function initWords() {
   const el = $('#words');
-  el.innerHTML = '<div class="box"><h2 class="wtt">Mots Mêlés</h2><p class="wtt">Choisis la difficulté</p><div class="ctl"><button data-d="0">Facile — 8×8, 6 mots</button><button data-d="1">Moyen — 11×11, 10 mots</button><button data-d="2">Difficile — 14×14, 16 mots</button></div></div>';
-  let tm;
+  el.innerHTML = '<div class="box"><h2 class="wtt">Mots Mêlés</h2><p class="wtt">Mise <input id="wordsBet" type="number" min="1" value="10"></p><p class="wtt">Choisis la difficulté</p><div class="ctl"><button data-d="0">Facile — 8×8, 6 mots</button><button data-d="1">Moyen — 11×11, 10 mots</button><button data-d="2">Difficile — 14×14, 16 mots</button></div></div>';
+  let tm, wordStake=0;
   stop = () => clearInterval(tm);
-  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => play(+b.dataset.d));
+  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#wordsBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}wordStake=v;setBal(bal-v);play(+b.dataset.d);});
   function play(d) {
     clearInterval(tm);
     const N = [8, 11, 14][d], cnt = [6, 10, 16][d];
@@ -385,7 +386,7 @@ function initWords() {
       if (hit) {
         $(`[data-w="${hit}"]`).classList.add('ok');
         sel.forEach(i => { cs[i].classList.add('found'); cs[i].style.setProperty('--c', `hsl(${hues[found % 8]},70%,45%)`); });
-        if (++found == words.length) { clearInterval(tm); $('#wm').textContent = 'Bravo ! Trouvé en ' + $('#wtm').textContent; }
+        if (++found == words.length) { clearInterval(tm); const gain=wordStake*2;setBal(bal+gain);$('#wm').textContent = 'Bravo ! Gain : '+fmt(gain)+' pièces — '+$('#wtm').textContent; }
       }
       cs.forEach(c => c.classList.remove('sel')); s = -1; sel = [];
     };
@@ -398,9 +399,9 @@ const SHP = ['1', '11', '111', '1111', '11111', '1/1', '1/1/1', '1/1/1/1', '1/1/
 const BCOL = ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#22d3ee', '#818cf8', '#e879f9'];
 function initBlast() {
   const el = $('#blast');
-  el.innerHTML = '<div class="box"><div class="bs"><div>Score <b id="bsc">0</b></div><div>Record <b id="bbest">0</b></div></div><div id="bb" class="bb"></div><div id="tr" class="tr"></div><div class="msg" id="bm"></div></div>';
+  el.innerHTML = '<div class="box"><div class="betbar"><label>Mise <input id="blastBet" type="number" min="1" value="10"></label><button id="blastStart">MISER ET JOUER</button><b id="blastState">En attente de mise</b></div><div class="bs"><div>Score <b id="bsc">0</b></div><div>Record <b id="bbest">0</b></div></div><div id="bb" class="bb"></div><div id="tr" class="tr"></div><div class="msg" id="bm"></div></div>';
   const N = 8, bb = $('#bb'), tr = $('#tr');
-  let B, score, best = 0, P, ended;
+  let B, score, best = 0, P, ended, blastStake=0, blastActive=false;
   for (let i = 0; i < 64; i++) { const d = document.createElement('div'); d.className = 'bc'; bb.append(d); }
   const cells = [...bb.children];
   const paint = () => cells.forEach((d, i) => { d.className = 'bc' + (B[i] ? ' f' : ''); d.style.setProperty('--c', B[i] || 'transparent'); });
@@ -413,7 +414,7 @@ function initBlast() {
   const tray = () => { tr.innerHTML = ''; P.forEach((p, i) => { const s = document.createElement('div'); s.className = 'slot'; if (p) { const d = mk(p); d.onpointerdown = e => drag(e, i); s.append(d); } tr.append(s); }); };
   const reset = () => { B = Array(64).fill(null); score = 0; ended = 0; P = [rndP(), rndP(), rndP()]; $('#bsc').textContent = 0; $('#bm').textContent = ''; paint(); tray(); };
   function drag(e, i) {
-    if (ended) return; e.preventDefault();
+    if (ended || !blastActive) return; e.preventDefault();
     const p = P[i], pitch = bb.getBoundingClientRect().width / N, g = mk(p, 'gh');
     g.style.setProperty('--cs', (pitch - 6) + 'px'); document.body.append(g);
     const gw = p.s[0].length * pitch, gh = p.s.length * pitch; let tr0 = -9, tc0 = -9;
@@ -446,16 +447,18 @@ function initBlast() {
     kill.forEach(k => cells[k].classList.add('clr'));
     setTimeout(() => {
       kill.forEach(k => B[k] = null); paint();
-      if (!P.some(x => x && can(x))) { ended = 1; $('#bm').textContent = 'Plus de place ! Touche ici pour rejouer'; }
+      if (!P.some(x => x && can(x))) { ended = 1; $('#bm').textContent = 'Plus de place !'; if(blastActive){const gain=Math.floor(blastStake*(1+score/250));setBal(bal+gain);$('#blastState').textContent='Gain : '+fmt(gain)+' pièces';blastActive=false;} }
     }, L ? 260 : 0);
   }
   $('#bm').onclick = () => { if (ended) reset(); };
+  $('#blastStart').onclick=()=>{if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#blastBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}blastStake=v;setBal(bal-v);blastActive=true;$('#blastState').textContent='Partie en cours';reset();};
   reset();
 }
 
 /* ---------- MENU ---------- */
 const games = { mines: initMines, tower: initTower, chicken: initChicken, merge: initMerge, words: initWords, blast: initBlast };
 document.querySelectorAll('.card').forEach(c => c.onclick = () => {
+  if (!auth.currentUser) { alert('Connecte-toi pour jouer.'); setPage('wallet'); return; }
   show('#' + c.dataset.g); games[c.dataset.g]();
 });
 $('#home').onclick = () => show('#menu');
@@ -466,19 +469,20 @@ show('#menu');
 const accountHTML = `
 <section id="wallet" class="scr hidden"><div class="box walletbox">
   <h2>Mon compte</h2><p id="authState">Connecte-toi pour sauvegarder tes crédits.</p>
-  <button id="loginBtn">Se connecter avec Google</button><button id="logoutBtn" class="hidden">Déconnexion</button>
-  <div class="walletgrid"><div><h3>Déposer</h3><label>Montant du dépôt<select id="depAmount"><option value="5">5 € — 1M pièces</option><option value="10">10 € — 2,67M pièces</option></select></label><button id="depositBtn">Faire une demande de dépôt</button><p class="hint">Le paiement est vérifié manuellement par l’administrateur dans le dashboard. Aucun paiement n’est vérifié automatiquement.</p></div>
-  <div><h3>Retirer</h3><label>Nombre de pièces<input id="withCoins" type="number" min="100000" step="10000" value="100000"></label><label>Prénom<input id="withFirst" maxlength="60"></label><label>Nom<input id="withLast" maxlength="60"></label><label>Email PayPal<input id="withPaypal" type="email" maxlength="160"></label><p id="withValue">Montant à recevoir : 0,30 €</p><button id="withdrawBtn">Demander le retrait</button><p class="hint">Taux : 100 000 pièces = 0,30 €. Les pièces sont réservées dès la demande.</p></div></div>
-  <h3>Mes notifications</h3><div id="myNotifs" class="noticeList">Aucune notification.</div>
-  <h3>Mes demandes</h3><div id="myRequests" class="noticeList"></div>
+  <button id="loginBtn">SE CONNECTER AVEC GOOGLE</button><button id="logoutBtn" class="hidden">Déconnexion</button>
+  <div class="walletgrid"><div><h3>Déposer</h3><label>Montant du dépôt<select id="depAmount"><option value="5">5 € — 1M pièces</option><option value="10">10 € — 2,67M pièces</option></select></label><button id="depositBtn">ENCAISSEMENT PAYPAL</button><p class="hint">Le paiement est vérifié manuellement par l’administrateur dans le dashboard. Aucun paiement n’est vérifié automatiquement.</p></div>
+  <div><h3>Retirer</h3><label>Nombre de pièces<input id="withCoins" type="number" min="100000" step="10000" value="100000"></label><label>Prénom<input id="withFirst" maxlength="60"></label><label>Nom<input id="withLast" maxlength="60"></label><label>Email PayPal<input id="withPaypal" type="email" maxlength="160"></label><p id="withValue">Montant à recevoir : 0,30 €</p><button id="withdrawBtn">DEMANDER UN RETRAIT</button><p class="hint">Taux : 100 000 pièces = 0,30 €. Les pièces sont réservées dès la demande.</p></div></div>
+  <h3>Mes notifications</h3><div id="myNotifs" class="noticeList">Aucune notification.</div><div id="myRequests" hidden></div>
+
 </div></section>
 <section id="admin" class="scr hidden"><div class="box walletbox"><h2>Dashboard administrateur</h2><p>Les paiements sont contrôlés manuellement. Aucun contrôle PayPal automatique.</p><h3>Notifications — dépôts à traiter</h3><div id="adminDeposits" class="noticeList"></div><h3>Notifications — retraits à traiter</h3><div id="adminWithdrawals" class="noticeList"></div></div></section>`;
 document.querySelector('main').insertAdjacentHTML('beforeend', accountHTML);
 const style = document.createElement('style'); style.textContent = `
-#wallet,#admin{min-height:calc(100vh - 60px);background:#111827;padding:10px;color:white}.walletbox{max-width:760px}.walletbox h2{font-size:28px;margin:12px 0}.walletbox h3{margin:18px 0 8px;color:#fde68a}.walletgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:18px 0}.walletgrid>div{background:#202b4c;padding:14px;border-radius:14px;display:grid;gap:9px}.walletbox label{display:grid;gap:5px;margin:8px 0}.walletbox input,.walletbox select{width:100%;min-height:42px}.walletbox button{margin:5px 5px 5px 0}.hint{font-size:13px;opacity:.8;line-height:1.4}.noticeList{display:grid;gap:9px}.notice{background:#202b4c;border:1px solid #46547e;border-radius:12px;padding:12px;display:grid;gap:7px}.notice small{opacity:.75}.notice button{margin-right:6px}.okbtn{background:#15803d}.badbtn{background:#991b1b}.walletnav{background:#0f766e!important}
+.betbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;margin-bottom:12px;background:#172554;border:1px solid #475569;border-radius:14px;color:white}.betbar label{display:flex;align-items:center;gap:8px}.betbar input{width:100px;padding:9px;border-radius:8px;border:1px solid #64748b;background:#0f172a;color:white}.betbar button{background:linear-gradient(#34d399,#059669)}
+#wallet,#admin{min-height:calc(100vh - 60px);background:linear-gradient(145deg,#0b1220,#111d34 55%,#172554);padding:22px;color:#f8fafc}.walletbox{max-width:920px;margin:18px auto;padding:26px;background:rgba(15,23,42,.88);border:1px solid #334155;border-radius:24px;box-shadow:0 24px 70px #0006}.walletbox h2{font-size:28px;margin:12px 0}.walletbox h3{margin:18px 0 8px;color:#fde68a}.walletgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:18px 0}.walletgrid>div{background:linear-gradient(150deg,#1e293b,#172554);border:1px solid #3b4a68;padding:22px;border-radius:20px;display:grid;gap:12px}.walletbox label{display:grid;gap:5px;margin:8px 0}.walletbox input,.walletbox select{width:100%;min-height:42px}.walletbox button{margin:5px 5px 5px 0;min-height:48px;border-radius:13px;background:linear-gradient(135deg,#2563eb,#4f46e5);box-shadow:0 5px 0 #1e3a8a;color:white}.walletnav{background:linear-gradient(135deg,#2563eb,#4f46e5)!important}.walletbox input,.walletbox select{box-sizing:border-box;background:#0f172a;color:#fff;border:1px solid #475569;border-radius:10px;padding:10px}.walletbox h2{font-size:32px}.walletbox h3{font-size:19px}.hint{font-size:13px;opacity:.8;line-height:1.4}.noticeList{display:grid;gap:9px}.notice{background:#202b4c;border:1px solid #46547e;border-radius:12px;padding:12px;display:grid;gap:7px}.notice small{opacity:.75}.notice button{margin-right:6px}.okbtn{background:#15803d}.badbtn{background:#991b1b}.walletnav{background:#0f766e!important}
 `; document.head.append(style);
-const nav = document.createElement('button'); nav.id='walletNav'; nav.textContent='Compte / Dépôt / Retrait'; nav.className='walletnav'; document.querySelector('header').insertBefore(nav, document.querySelector('#cr'));
-const adminNav = document.createElement('button'); adminNav.id='adminNav'; adminNav.textContent='Dashboard'; adminNav.className='hidden'; document.querySelector('header').insertBefore(adminNav, document.querySelector('#cr'));
+const nav = document.createElement('button'); nav.id='walletNav'; nav.textContent='COMPTE'; nav.className='walletnav'; document.querySelector('header').insertBefore(nav, document.querySelector('#cr'));
+const adminNav = document.createElement('button'); adminNav.id='adminNav'; adminNav.textContent='DASHBOARD'; adminNav.className='hidden'; document.querySelector('header').insertBefore(adminNav, document.querySelector('#cr'));
 const el=id=>document.getElementById(id); const euro=n=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
 let unsubNotifs=null, unsubDeps=null, unsubWith=null, unsubMine=null;
 function note(text){const n=document.createElement('div');n.className='notice';n.textContent=text;el('myNotifs').prepend(n);}
@@ -491,23 +495,35 @@ el('depositBtn').onclick=async()=>{
  const u=auth.currentUser;if(!u)return alert('Connecte-toi d’abord.');
  const amount=Number(el('depAmount').value), credits=amount===5?1000000:amount===10?2670000:0;
  try{await addDoc(collection(db,'depositRequests'),{uid:u.uid,email:u.email||'',displayName:u.displayName||'',amountEuros:amount,credits,status:'pending',createdAt:serverTimestamp()});
- window.open(PAYPAL_URL+amount,'_blank','noopener');alert('Demande enregistrée. Termine le paiement PayPal, puis attends la validation manuelle dans le dashboard.');}catch(e){alert('Erreur : '+e.message);}
+ await notify(u.uid,`Demande de dépôt envoyée : ${amount} € pour ${fmt(credits)} pièces. En attente de vérification.`); window.open(PAYPAL_URL+amount,'_blank','noopener');alert('Demande enregistrée. Termine le paiement PayPal, puis attends la validation manuelle.');}catch(e){alert('Erreur : '+e.message);}
 };
 el('withdrawBtn').onclick=async()=>{
  const u=auth.currentUser;if(!u)return alert('Connecte-toi d’abord.');
  const coins=Math.floor(Number(el('withCoins').value)), first=el('withFirst').value.trim(), last=el('withLast').value.trim(), paypal=el('withPaypal').value.trim();
- if(coins<100000||!first||!last||!/^\S+@\S+\.\S+$/.test(paypal))return alert('Minimum 100 000 pièces. Remplis le prénom, le nom et un email PayPal valide.');
+ if(coins<100000||!first||!last||!/^\S+@\S+\.\S+$/.test(paypal))return alert('Pièces insuffisantes ou formulaire incomplet. Minimum : 100 000 pièces.');
  const amount=Number((coins/100000*0.30).toFixed(2));
  try{await runTransaction(db,async tx=>{const ref=doc(db,'users',u.uid),snap=await tx.get(ref);if(!snap.exists()||(snap.data().credits||0)<coins)throw new Error('Crédits insuffisants.');tx.update(ref,{credits:(snap.data().credits||0)-coins,updatedAt:serverTimestamp()});});
  await addDoc(collection(db,'withdrawalRequests'),{uid:u.uid,email:u.email||'',displayName:u.displayName||'',firstName:first,lastName:last,paypalEmail:paypal,credits:coins,amountEuros:amount,status:'pending',createdAt:serverTimestamp()});
- note('Ta demande de retrait de '+fmt(coins)+' pièces ('+euro(amount)+') a été envoyée.');alert('Demande de retrait envoyée.');}catch(e){alert('Retrait impossible : '+e.message);}
+ await notify(u.uid,`Demande de retrait envoyée : ${fmt(coins)} pièces (${euro(amount)}). En attente de paiement.`);alert('Demande de retrait envoyée.');}catch(e){alert('Retrait impossible : '+e.message);}
 };
 function listenUser(u){
- if(unsubNotifs)unsubNotifs();if(unsubMine)unsubMine();
- unsubNotifs=onSnapshot(query(collection(db,'notifications'),where('uid','==',u.uid),orderBy('createdAt','desc')),(snap)=>{el('myNotifs').innerHTML='';if(snap.empty)el('myNotifs').textContent='Aucune notification.';snap.forEach(d=>{const v=d.data(),n=document.createElement('div');n.className='notice';n.textContent=v.message||'Notification';el('myNotifs').append(n);});});
- const refs=[['depositRequests','Dépôt'],['withdrawalRequests','Retrait']];
- unsubMine=onSnapshot(query(collection(db,'depositRequests'),where('uid','==',u.uid)),ds=>{const items=[];ds.forEach(d=>items.push({kind:'Dépôt',data:d.data()}));onSnapshot(query(collection(db,'withdrawalRequests'),where('uid','==',u.uid)),ws=>{ws.forEach(d=>items.push({kind:'Retrait',data:d.data()}));el('myRequests').innerHTML='';items.forEach(v=>{const n=document.createElement('div');n.className='notice';n.textContent=v.kind+' — '+(v.data.status||'en attente')+' — '+(v.data.credits?fmt(v.data.credits)+' pièces':'');el('myRequests').append(n);});});});
+ if(unsubNotifs)unsubNotifs();
+ if(unsubMine)unsubMine();
+ unsubNotifs=onSnapshot(query(collection(db,'notifications'),where('uid','==',u.uid),orderBy('createdAt','desc')),(snap)=>{
+   el('myNotifs').innerHTML='';
+   if(snap.empty)el('myNotifs').textContent='Aucune notification.';
+   snap.forEach(d=>{const v=d.data(),n=document.createElement('div');n.className='notice';n.textContent=v.message||'Notification';el('myNotifs').append(n);});
+ });
+ const render=()=>{};
+ const depQ=query(collection(db,'depositRequests'),where('uid','==',u.uid));
+ const withQ=query(collection(db,'withdrawalRequests'),where('uid','==',u.uid));
+ let dep=[],wit=[];
+ const draw=()=>{const items=[...dep.map(data=>({kind:'Dépôt',data})),...wit.map(data=>({kind:'Retrait',data}))];items.sort((a,b)=>(b.data.createdAt?.seconds||0)-(a.data.createdAt?.seconds||0));el('myRequests').innerHTML='';items.forEach(v=>{const n=document.createElement('div');n.className='notice';n.textContent=v.kind+' — '+(v.data.status||'en attente')+' — '+fmt(v.data.credits||0)+' pièces';el('myRequests').append(n);});};
+ const a=onSnapshot(depQ,s=>{dep=s.docs.map(d=>d.data());draw();});
+ const b=onSnapshot(withQ,s=>{wit=s.docs.map(d=>d.data());draw();});
+ unsubMine=()=>{a();b();};
 }
+
 async function notify(uid,message){await addDoc(collection(db,'notifications'),{uid,message,createdAt:serverTimestamp(),read:false});}
 function listenAdmin(){
  if(unsubDeps)unsubDeps();if(unsubWith)unsubWith();
@@ -516,8 +532,8 @@ function listenAdmin(){
 }
 onAuthStateChanged(auth,async u=>{
  window.PEXI.user=u||null;
- if(!u){el('authState').textContent='Non connecté';el('loginBtn').classList.remove('hidden');el('logoutBtn').classList.add('hidden');adminNav.classList.add('hidden');if(unsubNotifs)unsubNotifs();if(unsubMine)unsubMine();return;}
+ if(!u){bal=0;$('#bal').textContent='0';try{localStorage.removeItem('mj_bal')}catch(e){}el('authState').textContent='Non connecté';el('loginBtn').classList.remove('hidden');el('logoutBtn').classList.add('hidden');adminNav.classList.add('hidden');if(unsubNotifs)unsubNotifs();if(unsubMine)unsubMine();return;}
  el('authState').textContent='Connecté : '+(u.displayName||u.email);el('loginBtn').classList.add('hidden');el('logoutBtn').classList.remove('hidden');
- const ref=doc(db,'users',u.uid);let snap=await getDoc(ref);if(!snap.exists())await setDoc(ref,{uid:u.uid,email:u.email||'',displayName:u.displayName||'',credits:1000,createdAt:serverTimestamp()});else if(typeof snap.data().credits==='number'){bal=snap.data().credits;$('#bal').textContent=fmt(bal);try{localStorage.setItem('mj_bal',bal)}catch(e){}}
+ const ref=doc(db,'users',u.uid);let snap=await getDoc(ref);if(!snap.exists())await setDoc(ref,{uid:u.uid,email:u.email||'',displayName:u.displayName||'',credits:0,createdAt:serverTimestamp()});else if(typeof snap.data().credits==='number'){bal=snap.data().credits;$('#bal').textContent=fmt(bal);try{localStorage.setItem('mj_bal',bal)}catch(e){}}
  listenUser(u);if(u.email===ADMIN_EMAIL){adminNav.classList.remove('hidden');listenAdmin();}else adminNav.classList.add('hidden');
 });
