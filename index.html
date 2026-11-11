@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PEXI PLAY</title>
+<title>Pexi Play</title>
 <style>
 *{box-sizing:border-box;margin:0}
 body{font-family:system-ui,sans-serif;background:#10162b;color:#fff;min-height:100vh}
@@ -86,6 +86,7 @@ input,select{padding:8px;border-radius:8px;border:0;width:130px;background:#222b
 .pop small{display:block;font-size:20px;font-weight:800;color:#fff;text-shadow:0 2px 0 #be123c,0 0 12px #f43f5e}
 .pop.big b{font-size:60px}
 @keyframes pp{0%{transform:translateY(20px) scale(.4);opacity:0}25%{transform:translateY(0) scale(1.25);opacity:1}100%{transform:translateY(-70px) scale(1);opacity:0}}
+/* ---- v4 : boutons, tailles, gros gains, Chicken Road ---- */
 #cr{font-size:22px}
 button{font-weight:800;letter-spacing:.5px;border-radius:14px;padding:14px 18px;background:linear-gradient(#4f5fb3,#2b3668);box-shadow:0 5px 0 #151b3d,0 8px 14px #0006;transition:transform .08s,box-shadow .08s,filter .15s}
 button:hover:not(:disabled){filter:brightness(1.15)}
@@ -125,81 +126,75 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
 @keyframes lid{to{transform:translateY(-170px) rotate(540deg);opacity:0}}
 .pg{height:10px;background:#0006;border-radius:6px;margin-bottom:8px;overflow:hidden}
 .pg b{display:block;height:100%;width:0;background:linear-gradient(90deg,#fde047,#f97316);transition:width .3s}
-.brand{background:transparent!important;box-shadow:none!important;padding:8px 4px!important;font-size:19px;font-weight:950;letter-spacing:1px}
-.wallet-actions{display:flex;gap:7px;align-items:center}
-.wallet-actions button{padding:9px 11px;font-size:12px;white-space:nowrap}
-.paypal-btn{background:linear-gradient(#fff,#e7eef5)!important;color:#12345a!important;box-shadow:0 4px 0 #9aa9b8!important}
-.paypal-btn svg{width:22px;height:22px;vertical-align:middle;margin-right:4px}
-.wallet-btn{background:linear-gradient(#60a5fa,#2563eb)!important}
-.wallet-modal{position:fixed;inset:0;z-index:30;background:#050816dd;display:grid;place-items:center;padding:14px}
-.wallet-panel{position:relative;width:min(100%,430px);padding:24px 18px 18px;border-radius:18px;background:#182044;border:1px solid #53639b;box-shadow:0 18px 60px #000b}
-.wallet-panel h2{text-align:center;margin:5px 0 12px}
-.wallet-rate{text-align:center;color:#facc15;font-weight:900;margin:8px 0 14px}
-.wallet-close{position:absolute;right:12px;top:12px;padding:6px 10px!important}
-.wallet-form{display:grid;gap:12px}
-.wallet-form label{display:grid;gap:6px;font-weight:700}
-.wallet-form input{width:100%;padding:12px;background:#222b52;color:white;border:1px solid #53639b}
-.wallet-form .go{font-size:15px}
-.wallet-message{text-align:center;min-height:20px;margin-top:10px;color:#86efac}
-.wallet-note{font-size:11px;opacity:.7;line-height:1.4;margin-top:8px}
-@media(max-width:390px){header{padding:8px;gap:5px}.brand{font-size:15px!important}.wallet-actions button{font-size:10px;padding:8px 7px}#cr{font-size:14px}}
-.auth-area{display:grid;gap:9px;margin:10px 0 16px;padding:12px;border:1px solid #53639b;border-radius:14px;background:#111a37}
-.auth-area button{width:100%;padding:11px;font-weight:800}
-.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#303134;box-shadow:0 3px 0 #cbd5e1}
-.google-mark{font-size:22px;font-weight:900;font-family:Arial,sans-serif;background:conic-gradient(from -45deg,#4285f4 0 25%,#34a853 25% 50%,#fbbc05 50% 75%,#ea4335 75%);background-clip:text;-webkit-background-clip:text;color:transparent}
-.auth-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.link-btn{background:transparent!important;box-shadow:none!important;text-decoration:underline;padding:5px!important}
-.auth-identity{text-align:center;overflow-wrap:anywhere;font-size:13px;margin:4px 0}
+/* ---- v5 : nouveaux jeux ---- */
+.c4{background:linear-gradient(135deg,#be185d,#7e22ce)}
+.c5{background:linear-gradient(135deg,#0e7490,#1e3a8a)}
+.c6{background:linear-gradient(135deg,#6d28d9,#db2777)}
+.mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:#451a03}
+.mtop b{font-size:34px}
+.mtop span{display:flex;gap:6px}
+.mtop button{padding:8px 12px;font-size:13px;box-shadow:0 3px 0 #151b3d}
+.mtop button.on{background:linear-gradient(#34d399,#059669)}
+#merge,#words,#blast{min-height:calc(100vh - 52px)}
+#mc{display:block;width:100%;max-width:360px;margin:auto;border-radius:16px;border:4px solid #fff;touch-action:none;box-shadow:0 10px 30px #0005}
+#merge .msg{color:#451a03}
+#words{background:linear-gradient(#0e7490,#164e63)}
+.wtt{text-align:center;margin:12px 0}
+.wh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.wh b{font-size:26px}
+.wg{display:grid;gap:3px;touch-action:none;user-select:none;background:#fff2;padding:8px;border-radius:14px}
+.wc{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:clamp(13px,4vw,22px);background:#fff;color:#1e293b;border-radius:6px;cursor:pointer}
+.wc.sel{background:#fde047}
+.wc.found{color:#fff;background:var(--c)}
+.wl{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.wl span{background:#fff2;padding:5px 11px;border-radius:10px;font-weight:700}
+.wl .ok{text-decoration:line-through;opacity:.5}
+#blast{background:radial-gradient(circle at 15% 15%,#f472b6,transparent 40%),radial-gradient(circle at 85% 30%,#38bdf8,transparent 40%),radial-gradient(circle at 50% 95%,#a78bfa,transparent 45%),#1e1b4b}
+.bs{display:flex;justify-content:space-between;font-size:18px;margin-bottom:10px}
+.bs b{font-size:30px}
+.bb{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:10px;border-radius:26px;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6);border:1px solid rgba(255,255,255,.4);box-shadow:inset 0 1px 1px #fff9,0 20px 50px #0006}
+.bc{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 3px #0005}
+.bc.f,.pc i{background-color:var(--c);background-image:linear-gradient(145deg,rgba(255,255,255,.7),rgba(255,255,255,0) 55%);border:1px solid rgba(255,255,255,.6);box-shadow:inset 0 2px 3px #fffb,inset 0 -4px 8px #0003,0 3px 8px #0004}
+.bc.pv{outline:2px solid #fff;background:rgba(255,255,255,.35)}
+.bc.clr{animation:clr .25s forwards}
+@keyframes clr{to{transform:scale(0);opacity:0}}
+.tr{display:flex;justify-content:space-around;align-items:center;margin-top:18px;min-height:120px;padding:10px;border-radius:22px;background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.35)}
+.slot{flex:1;display:flex;justify-content:center}
+.pc{--cs:20px;display:grid;gap:3px;grid-auto-rows:var(--cs);touch-action:none;cursor:grab}
+.pc i,.pc u{width:var(--cs);height:var(--cs);border-radius:6px}
+.pc.gh{position:fixed;z-index:50;pointer-events:none}
+#bm{cursor:pointer}
+/* tour : maisons */
+.bl{border-top:3px solid #fff;border-bottom:4px solid #0003;background-image:linear-gradient(#fff3,#fff0 40%,#0002)}
+.bl i{position:relative;width:15px;height:18px;border-radius:8px 8px 2px 2px;background:linear-gradient(#bfe7ff,#60a5fa);border:2px solid #fff;box-shadow:-5px 0 0 #1e3a8a,5px 0 0 #1e3a8a}
+.bl i::after{content:'';position:absolute;left:-4px;right:-4px;bottom:-5px;height:5px;border-radius:2px;background:linear-gradient(90deg,#ec4899 0 25%,#16a34a 25% 50%,#ec4899 50% 75%,#16a34a 75%)}
+.bl i.dr{box-shadow:none;background:#78350f;border-color:#fde68a}
+.bl i.dr::after{display:none}
 </style>
 </head>
 <body>
 <header>
-  <button id="home" class="brand">PEXI PLAY</button>
+  <button id="home">☰ Menu</button>
+  <b>Pexi Play</b>
   <span id="cr">💰 <span id="bal">1000</span></span>
-  <div class="wallet-actions"><button id="profileOpen" class="wallet-btn">Mon profil</button></div>
 </header>
-
-<div id="profileModal" class="wallet-modal hidden" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-  <div class="wallet-panel">
-    <button id="profileClose" class="wallet-close" aria-label="Fermer">✕</button>
-    <h2 id="profileTitle">Mon profil</h2>
-    <p class="wallet-rate">Gère tes crédits</p>
-    <div class="wallet-form">
-      <button id="deposit" class="paypal-btn" type="button">Ajouter des crédits avec PayPal</button>
-      <button id="withdraw" class="wallet-btn" type="button">Retirer mes crédits</button>
-    </div>
-  </div>
-</div>
-
-<div id="walletModal" class="wallet-modal hidden" role="dialog" aria-modal="true" aria-labelledby="walletTitle">
-  <div class="wallet-panel">
-    <button id="walletClose" class="wallet-close" aria-label="Fermer">✕</button>
-    <h2 id="walletTitle">Retrait de crédits</h2>
-    <p class="wallet-rate">10 000 crédits = 3 €</p>
-    <form id="withdrawForm" class="wallet-form">
-      <label>Nom<input name="surname" required maxlength="60" placeholder="Votre nom"></label>
-      <label>Prénom<input name="firstname" required maxlength="60" placeholder="Votre prénom"></label>
-      <label>Adresse e-mail PayPal<input name="email" type="email" required placeholder="nom@exemple.com"></label>
-      <label>Crédits à retirer<input name="credits" type="number" min="10000" step="10000" value="10000" required></label>
-      <p id="withdrawValue" class="wallet-rate">Montant estimé : 3 €</p>
-      <button class="go" type="submit">Envoyer la demande de retrait</button>
-    </form>
-    <p id="walletMessage" class="wallet-message"></p>
-    <p class="wallet-note">La demande est enregistrée et doit être vérifiée manuellement. Aucun paiement PayPal n'est déclenché automatiquement.</p>
-  </div>
-</div>
-
 <main>
   <section id="menu" class="scr">
     <h1>Choisis ton jeu</h1>
     <button class="card c1" data-g="mines"><i>🪙</i><span>Coin Miner<small>Trouve les pièces, évite les bombes</small></span></button>
     <button class="card c2" data-g="tower"><i>🏗️</i><span>Tower Builder<small>Empile les blocs le plus haut possible</small></span></button>
     <button class="card c3" data-g="chicken"><i>🐔</i><span>Chicken Road<small>Fais traverser la poule sans te faire écraser</small></span></button>
+    <button class="card c4" data-g="merge"><i>🍉</i><span>Fruit / Squishie Merge<small>Fusionne les fruits ou les squishies</small></span></button>
+    <button class="card c5" data-g="words"><i>🔎</i><span>Mots Mêlés<small>Trouve tous les mots cachés</small></span></button>
+    <button class="card c6" data-g="blast"><i>🧊</i><span>Block Blast<small>Style liquid glass</small></span></button>
   </section>
   <section id="mines" class="scr hidden"></section>
   <section id="tower" class="scr hidden"></section>
   <section id="chicken" class="scr hidden"></section>
+  <section id="merge" class="scr hidden"></section>
+  <section id="words" class="scr hidden"></section>
+  <section id="blast" class="scr hidden"></section>
 </main>
-<script type="module" src="./app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
