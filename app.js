@@ -45,6 +45,11 @@ function setup(id, extra) {
       d.innerHTML = `<b>+${fmt(w)}</b><small>GAGNÉ !</small>`;
       q('.stage').append(d); setTimeout(() => d.remove(), 2000); winXP();
     },
+    lose: () => {
+      q('.msg').textContent = 'PERDU !';
+      const d = document.createElement('div'); d.className = 'wb l'; d.innerHTML = '<b>PERDU</b><small>La poule s\'est fait renverser</small>';
+      q('.stage').append(d); setTimeout(() => d.remove(), 2200);
+    },
     run: v => {
       el.querySelectorAll('.ctl input,.ctl select,.q button').forEach(x => x.disabled = v);
       q('.go').disabled = v; q('.out').disabled = !v;
@@ -105,15 +110,15 @@ function initTower() {
   tw.style.zoom = Math.min(1.45, (innerWidth - 24) / 306);
   let x = 0, h = '';
   while (x < W) {
-    const bw = 28 + Math.random() * 26 | 0, hs = Math.random() < .35;
-    h += `<div class="${hs ? 'hs' : 'sk'}" style="left:${x}px;width:${bw}px;height:${hs ? 50 + Math.random() * 30 | 0 : 70 + Math.random() * 130 | 0}px"></div>`;
+    const bw = 26 + Math.random() * 28 | 0, bh = 80 + Math.random() * 130 | 0;
+    h += `<div class="sk" style="left:${x}px;width:${bw}px;height:${bh}px">${Math.random() < .4 ? '<b class="an"></b>' : ''}</div>`;
     x += bw + 2;
   }
   cy.innerHTML = h;
   let on = false, n, x0, w0, px, s, cur, raf, t0;
   const mu = k => Math.pow(1.12, k);
-  const pal = ['#fde2c8', '#fbcfe8', '#bfdbfe', '#d9f99d', '#fef08a'];
-  const wins = wi => '<i></i>'.repeat(Math.max(1, Math.floor(wi / 34)));
+  const pal = ['#334155', '#3b4a63', '#1e3a5f', '#2f4858', '#3f3f5a'];
+  const wins = wi => Array.from({ length: Math.max(1, Math.floor(wi / 16)) }, () => `<i${Math.random() < .35 ? ' class="lit"' : ''}></i>`).join('');
   const blk = (xx, wi, fl) => {
     const d = document.createElement('div'); d.className = 'bl';
     d.style.cssText = `left:${xx}px;width:${wi}px;bottom:${fl * H}px;background-color:${pal[fl % 5]}`;
@@ -167,18 +172,24 @@ function initTower() {
 /* ---------- CHICKEN ROAD ---------- */
 const MH = '<svg class="mh" viewBox="0 0 80 80"><defs><radialGradient id="mg" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#a7b0bf"/><stop offset="1" stop-color="#4b5563"/></radialGradient></defs><circle cx="40" cy="43" r="38" fill="#0007"/><circle cx="40" cy="40" r="38" fill="#1f2530"/><circle cx="40" cy="40" r="34" fill="url(#mg)"/><circle cx="40" cy="40" r="27" fill="none" stroke="#3b4350" stroke-width="3"/><path d="M40 13V67M13 40H67M21 21L59 59M59 21L21 59" stroke="#3b4350" stroke-width="2.5"/></svg>';
 const EGG = '<svg class="mh" viewBox="0 0 80 80" style="filter:drop-shadow(0 0 10px #fde047)"><ellipse cx="40" cy="44" rx="22" ry="29" fill="#facc15" stroke="#ca8a04" stroke-width="3"/><ellipse cx="32" cy="34" rx="6" ry="10" fill="#fef9c3" opacity=".8"/></svg>';
-const CH = '<svg viewBox="0 0 80 90" style="display:block"><ellipse cx="40" cy="87" rx="26" ry="4" fill="#0006"/><path d="M30 68v16M52 68v16M24 86h14M46 86h14" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M18 50Q2 44 6 26Q18 30 24 42z" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="40" cy="52" rx="26" ry="22" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><ellipse cx="32" cy="56" rx="12" ry="13" fill="#e5e7eb" stroke="#cbd5e1" stroke-width="2"/><circle cx="52" cy="28" r="15" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><circle cx="46" cy="12" r="5" fill="#ef4444"/><circle cx="54" cy="10" r="5" fill="#ef4444"/><circle cx="61" cy="14" r="4" fill="#ef4444"/><path d="M65 25L78 30L65 35z" fill="#f59e0b"/><ellipse cx="63" cy="40" rx="3" ry="5" fill="#ef4444"/><circle cx="57" cy="25" r="3" fill="#111"/><circle cx="58" cy="24" r="1" fill="#fff"/><circle cx="48" cy="33" r="3" fill="#fca5a5" opacity=".7"/></svg>';
-const FIRE = '<svg class="fire" viewBox="0 0 80 100"><path d="M40 98C10 90 8 60 28 40c0 14 8 16 10 6C44 30 38 16 46 2c14 20 34 36 26 62C68 86 56 96 40 98z" fill="#ef4444"/><path d="M40 98C16 92 16 70 32 52c2 10 6 10 8 4 2-14 0-24 8-34 10 16 22 30 16 50-4 14-14 24-24 26z" fill="#f97316"/><path d="M40 98C24 92 24 76 36 62c2 8 6 8 8 2 4 8 10 14 6 24-2 6-6 9-10 10z" fill="#fde047"/></svg>';
-const BAR = '<svg class="bar" viewBox="0 0 90 30"><rect x="10" y="20" width="5" height="10" fill="#444"/><rect x="75" y="20" width="5" height="10" fill="#444"/><rect x="4" y="6" width="82" height="16" rx="3" fill="#fff" stroke="#999"/><path d="M10 6l10 16h12L22 6zM34 6l10 16h12L46 6zM58 6l10 16h12L70 6z" fill="#ef4444"/></svg>';
-const CAR = (c, d) => `<svg class="car" viewBox="0 0 40 80" style="animation-duration:${d + 2}s;animation-delay:-${d}s"><rect x="3" y="6" width="34" height="72" rx="11" fill="#0005"/><rect x="4" y="4" width="32" height="72" rx="11" fill="${c}"/><rect x="9" y="16" width="22" height="13" rx="3" fill="#bfdbfe"/><rect x="9" y="46" width="22" height="10" rx="3" fill="#93c5fd"/><rect x="0" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="12" width="5" height="14" rx="2" fill="#111"/><rect x="0" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="35" y="54" width="5" height="14" rx="2" fill="#111"/><rect x="8" y="70" width="7" height="4" rx="2" fill="#fef08a"/><rect x="25" y="70" width="7" height="4" rx="2" fill="#fef08a"/></svg>`;
-
-const TRK = (c, d) => `<svg class="car tk" viewBox="0 0 44 130" style="animation-duration:${d + 3}s;animation-delay:-${d}s"><rect x="4" y="6" width="36" height="120" rx="6" fill="#0005"/><rect x="5" y="4" width="34" height="84" rx="4" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/><rect x="6" y="90" width="32" height="34" rx="8" fill="${c}"/><rect x="10" y="98" width="24" height="10" rx="2" fill="#bfdbfe"/><rect x="9" y="118" width="7" height="4" rx="2" fill="#fef08a"/><rect x="28" y="118" width="7" height="4" rx="2" fill="#fef08a"/></svg>`;
+const CH = '<svg viewBox="0 0 90 100" style="display:block"><defs><radialGradient id="cb" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#f1f5f9"/><stop offset="1" stop-color="#cbd5e1"/></radialGradient><radialGradient id="cm" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#f87171"/><stop offset="1" stop-color="#b91c1c"/></radialGradient></defs><ellipse cx="45" cy="96" rx="28" ry="4" fill="#0006"/><path d="M36 74V90M54 74V90M28 92H44M46 92H62" stroke="#ea580c" stroke-width="4.5" stroke-linecap="round" fill="none"/><path d="M18 52C4 50 0 34 6 22 14 30 22 38 26 48Z" fill="url(#cb)" stroke="#94a3b8" stroke-width="2"/><path d="M14 60C2 58-2 48 2 38 12 42 20 48 24 58Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/><ellipse cx="42" cy="58" rx="30" ry="26" fill="url(#cb)" stroke="#94a3b8" stroke-width="2.5"/><path d="M22 56C22 72 40 80 52 68 46 70 32 66 30 52Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/><path d="M30 62q4 4 8 0M36 68q4 4 8 0" stroke="#94a3b8" stroke-width="1.5" fill="none"/><circle cx="60" cy="30" r="17" fill="url(#cb)" stroke="#94a3b8" stroke-width="2.5"/><g fill="url(#cm)" stroke="#991b1b" stroke-width="1.5"><circle cx="53" cy="13" r="6"/><circle cx="61" cy="10" r="7"/><circle cx="69" cy="14" r="6"/></g><path d="M74 26L88 31L74 37Z" fill="#fb923c" stroke="#c2410c" stroke-width="1.5"/><ellipse cx="72" cy="42" rx="4" ry="6" fill="url(#cm)" stroke="#991b1b" stroke-width="1.5"/><circle cx="65" cy="27" r="4.5" fill="#fff" stroke="#64748b"/><circle cx="66" cy="27" r="2.6" fill="#111"/><circle cx="67" cy="26" r="1" fill="#fff"/><circle cx="56" cy="36" r="3.5" fill="#fca5a5" opacity=".6"/></svg>';
+const BAR = '<svg class="bar" viewBox="0 0 110 44"><rect x="14" y="20" width="6" height="22" fill="#6b7280"/><rect x="90" y="20" width="6" height="22" fill="#6b7280"/><rect x="4" y="8" width="102" height="18" rx="3" fill="#fff" stroke="#9ca3af" stroke-width="1.5"/><path d="M10 8l14 18h12L22 8zM38 8l14 18h12L50 8zM66 8l14 18h12L78 8z" fill="#f97316"/><circle class="lamp" cx="55" cy="5" r="5" fill="#f59e0b"/></svg>';
+// Vraies voitures vues du dessus (type : s berline, t taxi, p sportive, k camion)
+function carSVG(t, c, d, kill) {
+  const wh = [[0, 14], [39, 14], [0, 58], [39, 58]].map(([x, y]) => `<rect x="${x}" y="${y}" width="5" height="15" rx="2" fill="#111"/>`).join('');
+  const defs = '<defs><linearGradient id="cg"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs>';
+  const st = kill ? '' : ` style="animation-duration:${d + 2}s;animation-delay:-${d}s"`;
+  if (t == 'k') return `<svg class="car k${kill ? ' kill' : ''}" viewBox="0 0 44 130"${st}>${defs}<rect x="6" y="6" width="36" height="122" rx="6" fill="#0006"/><rect x="4" y="3" width="36" height="86" rx="4" fill="#e5e7eb" stroke="#94a3b8" stroke-width="1.5"/><path d="M8 12H36M8 26H36M8 40H36M8 54H36M8 68H36M8 80H36" stroke="#cbd5e1" stroke-width="2"/><rect x="5" y="90" width="34" height="36" rx="9" fill="${c}"/><rect x="5" y="90" width="34" height="36" rx="9" fill="url(#cg)"/><path d="M10 106Q22 100 34 106L33 116Q22 119 11 116Z" fill="#0f172a"/><rect x="8" y="122" width="9" height="4" rx="2" fill="#fef9c3"/><rect x="27" y="122" width="9" height="4" rx="2" fill="#fef9c3"/><rect x="0" y="96" width="5" height="14" rx="2" fill="#111"/><rect x="39" y="96" width="5" height="14" rx="2" fill="#111"/><rect x="0" y="20" width="5" height="16" rx="2" fill="#111"/><rect x="39" y="20" width="5" height="16" rx="2" fill="#111"/><rect x="0" y="52" width="5" height="16" rx="2" fill="#111"/><rect x="39" y="52" width="5" height="16" rx="2" fill="#111"/></svg>`;
+  const body = t == 't' ? '#facc15' : c;
+  const extra = t == 't' ? '<rect x="15" y="38" width="14" height="7" rx="2" fill="#fff" stroke="#111"/><path d="M3 44H41" stroke="#111" stroke-width="2" stroke-dasharray="3 3"/>' : t == 'p' ? '<rect x="18" y="3" width="8" height="84" fill="#fff" opacity=".85"/>' : '';
+  return `<svg class="car${kill ? ' kill' : ''}" viewBox="0 0 44 90"${st}>${defs}<rect x="6" y="6" width="36" height="84" rx="14" fill="#0006"/><rect x="3" y="3" width="38" height="84" rx="${t == 'p' ? 18 : 14}" fill="${body}" stroke="#0005" stroke-width="1.5"/><rect x="3" y="3" width="38" height="84" rx="14" fill="url(#cg)"/>${extra}<path d="M10 56Q22 50 34 56L32 68Q22 72 12 68Z" fill="#0f172a"/><path d="M11 18Q22 14 33 18L31 28Q22 31 13 28Z" fill="#0f172a"/><rect x="11" y="28" width="22" height="28" rx="5" fill="${body}" stroke="#0004"/><rect x="11" y="28" width="22" height="28" rx="5" fill="#fff" opacity=".22"/>${t == 't' ? '<rect x="15" y="38" width="14" height="7" rx="2" fill="#fff" stroke="#111"/>' : ''}<rect x="7" y="80" width="9" height="5" rx="2" fill="#fef9c3"/><rect x="28" y="80" width="9" height="5" rx="2" fill="#fef9c3"/><rect x="7" y="4" width="9" height="4" rx="2" fill="#ef4444"/><rect x="28" y="4" width="9" height="4" rx="2" fill="#ef4444"/>${wh}<rect x="0" y="52" width="5" height="6" rx="2" fill="${body}"/><rect x="39" y="52" width="5" height="6" rx="2" fill="${body}"/></svg>`;
+}
 
 function initChicken() {
   const g = setup('#chicken', '<label>Difficulté<select class="d"><option value=".12">Facile</option><option value=".2">Moyen</option><option value=".32">Difficile</option><option value=".5">Hardcore</option></select></label><button class="adv" disabled>Avancer</button>');
   g.q('.stage').innerHTML = '<div class="pg"><b></b></div><div class="road"></div>';
   const rd = g.q('.road'), adv = g.q('.adv'), N = 15, ch = document.createElement('div');
-  const cols = ['#dc2626', '#2563eb', '#eab308', '#16a34a', '#f8fafc'];
+  const cols = ['#dc2626', '#2563eb', '#16a34a', '#7c3aed', '#f8fafc', '#ea580c'], ty = ['s', 't', 'p', 'k', 's', 'p'];
   let on = false, k = 0, p = +g.q('.d').value, s, L = [];
   const mu = i => .9 / Math.pow(1 - p, i);
   const place = l => { l.append(ch); ch.classList.remove('hop'); void ch.offsetWidth; ch.classList.add('hop'); };
@@ -186,30 +197,31 @@ function initChicken() {
     rd.innerHTML = ''; L = []; ch.className = 'ch'; ch.innerHTML = CH; g.q('.pg b').style.width = '0%';
     for (let i = 0; i <= N; i++) {
       const d = document.createElement('div'); d.className = 'ln' + (i ? '' : ' st') + (i == N ? ' gl' : '');
-      d.innerHTML = (i && i < N ? (i % 4 == 2 ? TRK : CAR)(cols[i % 5], Math.random() * 3 + 1) : '') + (i == N ? EGG : i ? MH : '') +
+      d.innerHTML = (i && i < N ? carSVG(ty[i % 6], cols[i % 6], Math.random() * 3 + 1) : '') + (i == N ? EGG : i ? MH : '') +
         `<span class="lm">${i ? 'x' + fx(mu(i)) : 'DÉPART'}</span>`;
       rd.append(d); L.push(d);
     }
     L[0].append(ch); rd.scrollLeft = 0;
   };
-  const cash = () => {
-    on = false; const w = s * mu(k); setBal(bal + w);
-    g.win(w); adv.disabled = true; g.run(false);
-  };
+  const cash = () => { on = false; g.win(s * mu(k)); setBal(bal + s * mu(k)); adv.disabled = true; g.run(false); };
   g.q('.d').onchange = () => { p = +g.q('.d').value; build(); };
   adv.onclick = () => {
-    if (!on) return;
-    if (Math.random() < p) {
-      on = false; L[k + 1].classList.add('boom'); L[k + 1].insertAdjacentHTML('beforeend', '<i class="hole"></i>' + FIRE);
-      ch.classList.add('dead'); place(L[k + 1]);
-      g.msg('Grillée par les flammes ! Perdu'); adv.disabled = true; g.run(false); return;
+    if (!on) return; adv.disabled = true;
+    const lane = L[k + 1], fail = Math.random() < p;
+    lane.querySelectorAll('.car').forEach(x => x.remove());
+    place(lane); rd.scrollTo({ left: lane.offsetLeft - 170, behavior: 'smooth' });
+    if (fail) {
+      on = false; lane.insertAdjacentHTML('beforeend', carSVG(Math.random() < .5 ? 'k' : 's', cols[k % 6], 0, 1));
+      setTimeout(() => {
+        ch.classList.add('dead');
+        for (let i = 0; i < 9; i++) lane.insertAdjacentHTML('beforeend', `<i class="fth" style="--x:${(Math.random() - .5) * 150}px;--y:${-Math.random() * 120}px"></i>`);
+        g.lose(); g.run(false);
+      }, 340);
+      return;
     }
-    k++; L[k].classList.add('done'); place(L[k]); g.q('.pg b').style.width = (k / N * 100) + '%';
-    // la barrière se pose : plus aucune voiture sur la voie franchie
-    L[k].querySelectorAll('.car').forEach(c => c.remove());
-    if (k < N) L[k].insertAdjacentHTML('beforeend', BAR);
-    g.mult(mu(k)); rd.scrollTo({ left: L[k].offsetLeft - 170, behavior: 'smooth' });
-    if (k == N) cash();
+    k++; lane.classList.add('done'); g.q('.pg b').style.width = (k / N * 100) + '%';
+    if (k < N) lane.insertAdjacentHTML('beforeend', BAR);
+    g.mult(mu(k)); adv.disabled = false; if (k == N) cash();
   };
   g.q('.go').onclick = () => {
     s = g.take(); if (!s) return;
@@ -224,7 +236,27 @@ function initChicken() {
 const R = [14, 19, 25, 31, 38, 46, 55, 65, 76, 88];
 const FC = ['#dc2626', '#fb7185', '#7e22ce', '#fb923c', '#65a30d', '#bef264', '#fda4af', '#facc15', '#86efac', '#16a34a'];
 const SC = ['#fda4af', '#fdba74', '#fde047', '#86efac', '#67e8f9', '#93c5fd', '#c4b5fd', '#f0abfc', '#f9a8d4', '#fcd34d'];
+const DC = [['#fff1c9', '#f6c453'], ['#ffd3e2', '#f472b6'], ['#c8f5d9', '#34d399'], ['#cfe8ff', '#60a5fa'], ['#e4dcff', '#a78bfa'], ['#ffd0cc', '#f87171'], ['#ffe0c2', '#fb923c'], ['#b8f2e6', '#2dd4bf'], ['#f8d6ff', '#d946ef'], ['#fff7b0', '#eab308']];
+// Squishie = mini dumpling mou avec visage kawaii
+function dumpling(c, x, y, r, l, age) {
+  const s = 1 + .2 * Math.sin(age * .5) * Math.exp(-age * .09), [a, b] = DC[l];
+  c.save(); c.translate(x, y + r * .08); c.scale(2 - s, s);
+  c.beginPath(); c.moveTo(-r, r * .4);
+  c.bezierCurveTo(-r * 1.05, -r * .55, -r * .55, -r * .98, 0, -r * .9);
+  c.bezierCurveTo(r * .55, -r * .98, r * 1.05, -r * .55, r, r * .4);
+  c.bezierCurveTo(r * .9, r * .95, -r * .9, r * .95, -r, r * .4); c.closePath();
+  const g = c.createRadialGradient(-r * .3, -r * .4, r * .1, 0, 0, r * 1.1); g.addColorStop(0, '#fff'); g.addColorStop(.35, a); g.addColorStop(1, b);
+  c.fillStyle = g; c.fill(); c.lineWidth = 2.5; c.strokeStyle = 'rgba(80,40,30,.45)'; c.stroke();
+  c.strokeStyle = 'rgba(120,70,50,.45)'; c.lineWidth = 2; c.lineCap = 'round';
+  for (let i = 0; i < 7; i++) { const t = Math.PI * (1.12 + i * .12), px = Math.cos(t) * r * .9, py = Math.sin(t) * r * .8 - r * .02; c.beginPath(); c.moveTo(px, py); c.lineTo(px * .82, py * .82 + r * .12); c.stroke(); }
+  c.fillStyle = '#3b2a2a'; for (const e of [-1, 1]) { c.beginPath(); c.ellipse(e * r * .3, r * .08, r * .075, r * .1, 0, 0, 7); c.fill(); }
+  c.fillStyle = '#fff'; for (const e of [-1, 1]) { c.beginPath(); c.arc(e * r * .3 + r * .025, r * .04, r * .03, 0, 7); c.fill(); }
+  c.fillStyle = 'rgba(255,100,130,.5)'; for (const e of [-1, 1]) { c.beginPath(); c.ellipse(e * r * .55, r * .25, r * .12, r * .08, 0, 0, 7); c.fill(); }
+  c.beginPath(); c.arc(0, r * .2, r * .1, .1 * Math.PI, .9 * Math.PI); c.strokeStyle = '#3b2a2a'; c.lineWidth = 2; c.stroke();
+  c.restore();
+}
 function drawIt(c, x, y, r, l, sq, age) {
+  if (sq) return dumpling(c, x, y, r, l, age);
   const s = 1 + .22 * Math.sin(age * .5) * Math.exp(-age * .09);
   c.save(); c.translate(x, y); c.scale(2 - s, s);
   c.beginPath(); c.arc(0, 0, r, 0, 7); c.fillStyle = (sq ? SC : FC)[l]; c.fill();
@@ -450,15 +482,25 @@ const lvUp = k => { LV[k] = lvGet(k) + 1; try { localStorage.setItem('mj_l_' + k
 const dif = L => L < 3 ? 'Facile' : L < 8 ? 'Moyen' : L < 15 ? 'Difficile' : L < 25 ? 'Expert' : 'Extrême';
 
 /* ---------- WATER SORT ---------- */
-const WCOL = ['#ef4444', '#f97316', '#facc15', '#84cc16', '#16a34a', '#06b6d4', '#2563eb', '#8b5cf6', '#ec4899', '#92400e', '#cbd5e1', '#0f172a'];
-const WSYM = ['●', '▲', '■', '★', '♦', '♥', '♣', '♠', '✚', '☀', '☾', '✿'];
+const WCOL = ['#ef4444', '#f97316', '#facc15', '#84cc16', '#16a34a', '#06b6d4', '#2563eb', '#8b5cf6', '#ec4899', '#92400e', '#e5e7eb', '#0f172a'];
+const RIM = 'fill="rgba(255,255,255,.35)" stroke="rgba(255,255,255,.85)" stroke-width="2"';
+const WSH = {
+  tube: { o: 'M10 12V136A25 25 0 0 0 60 136V12Z', yb: 162, lh: 37, g: [17, 22, 120], x: `<rect x="6" y="6" width="58" height="9" rx="4.5" ${RIM}/>` },
+  bottle: { o: 'M27 6H43V34C43 48 62 50 62 72V150Q62 164 48 164H22Q8 164 8 150V72C8 50 27 48 27 34Z', yb: 163, lh: 25, g: [16, 76, 140], x: `<rect x="24" y="2" width="22" height="8" rx="3" ${RIM}/>` },
+  vase: { o: 'M26 6H44C44 18 40 26 52 38C66 54 66 92 58 120C56 130 56 142 60 152Q60 164 48 164H22Q10 164 10 152C14 142 14 130 12 120C4 92 4 54 18 38C30 26 26 18 26 6Z', yb: 164, lh: 27, g: [15, 60, 120], x: `<rect x="22" y="2" width="26" height="8" rx="4" ${RIM}/>` }
+};
 function initWater() {
   const el = $('#water');
-  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="wsc">0</b></span><b id="wdf"></b><span class="skin"><button data-k="tube" class="on">Tube</button><button data-k="bottle">Bouteille</button><button data-k="vase">Vase</button></span></div><div id="wt" class="wt tube"></div><div class="ctl"><button id="wun">Annuler</button><button id="wrs">Recommencer</button><button id="wsy" class="on">Symboles</button></div><div class="msg" id="wmsg"></div></div>';
-  const wt = $('#wt'); let T, sel = -1, hist = [], init0, score = 0, busy = 0;
-  const render = () => {
-    wt.innerHTML = T.map((t, i) => `<div class="tb${i == sel ? ' up' : ''}" data-i="${i}"><div class="lqs">${t.map(c => `<div class="lq" style="--c:${WCOL[c]}"><s>${WSYM[c]}</s></div>`).join('')}</div></div>`).join('');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="wsc">0</b></span><b id="wdf"></b><span class="skin"><button data-k="tube" class="on">Tube</button><button data-k="bottle">Bouteille</button><button data-k="vase">Vase</button></span></div><div id="wt" class="wt"></div><div class="ctl"><button id="wun">Annuler</button><button id="wrs">Recommencer</button></div><div class="msg" id="wmsg"></div></div>';
+  const wt = $('#wt'); let T, sel = -1, hist = [], init0, score = 0, busy = 0, skin = 'tube';
+  const svg = (t, i) => {
+    const S = WSH[skin], top = S.yb - t.length * S.lh, wv = 'M-40 0q10-4 20 0t20 0 20 0 20 0 20 0 20 0 20 0 20 0V9H-40Z';
+    const layers = t.map((c, j) => `<rect x="0" y="${S.yb - (j + 1) * S.lh}" width="70" height="${S.lh + .6}" fill="${WCOL[c]}"/>`).join('');
+    const col = t.length ? WCOL[t[t.length - 1]] : '#fff';
+    const wave = t.length ? `<g transform="translate(0,${top})"><path class="wv" d="${wv}" fill="${col}"/><path class="wv" d="${wv}" fill="#fff" opacity=".25"/></g><rect x="0" y="${top}" width="70" height="${S.yb - top}" fill="url(#sh${i})"/>` : '';
+    return `<svg class="tb${i == sel ? ' up' : ''}" data-i="${i}" viewBox="0 0 70 170"><defs><clipPath id="cp${i}"><path d="${S.o}"/></clipPath><linearGradient id="sh${i}"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient></defs><path d="${S.o}" fill="rgba(255,255,255,.1)"/><g clip-path="url(#cp${i})">${layers}${wave}</g><path d="${S.o}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2.5"/><path d="M17 ${S.g[1]}V${S.g[2]}" stroke="rgba(255,255,255,.6)" stroke-width="4" stroke-linecap="round"/>${S.x}</svg>`;
   };
+  const render = () => { wt.innerHTML = T.map(svg).join(''); };
   const gen = () => {
     const L = lvGet('water'), n = Math.min(3 + (L / 2 | 0), 12), pool = [];
     for (let c = 0; c < n; c++) for (let k = 0; k < 4; k++) pool.push(c);
@@ -485,28 +527,56 @@ function initWater() {
   };
   $('#wun').onclick = () => { if (hist.length && !busy) { T = JSON.parse(hist.pop()); sel = -1; render(); } };
   $('#wrs').onclick = () => { if (!busy) { T = JSON.parse(init0); hist = []; sel = -1; render(); } };
-  $('#wsy').onclick = e => { wt.classList.toggle('nosym'); e.target.classList.toggle('on'); };
   el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
-    wt.className = 'wt ' + b.dataset.k + (wt.classList.contains('nosym') ? ' nosym' : '');
-    el.querySelectorAll('[data-k]').forEach(x => x.classList.toggle('on', x == b));
+    skin = b.dataset.k; el.querySelectorAll('[data-k]').forEach(x => x.classList.toggle('on', x == b)); render();
   });
   gen();
 }
 
 /* ---------- KNIFE HIT ---------- */
 function dk(c) {
-  const g = c.createLinearGradient(-7, 0, 7, 0); g.addColorStop(0, '#e5e7eb'); g.addColorStop(.5, '#fff'); g.addColorStop(1, '#9ca3af');
-  c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.lineTo(7, 16); c.lineTo(7, 50); c.lineTo(-7, 50); c.lineTo(-7, 16); c.closePath(); c.fill();
-  c.fillStyle = '#fbbf24'; c.fillRect(-10, 48, 20, 6); c.fillStyle = '#7c2d12'; c.fillRect(-5, 54, 10, 34);
+  c.save();
+  const g = c.createLinearGradient(-8, 0, 8, 0); g.addColorStop(0, '#9ca3af'); g.addColorStop(.4, '#f8fafc'); g.addColorStop(.55, '#d1d5db'); g.addColorStop(1, '#6b7280');
+  c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(9, 14, 8, 30); c.lineTo(8, 52); c.lineTo(-8, 52); c.lineTo(-8, 30); c.quadraticCurveTo(-9, 14, 0, 0); c.closePath(); c.fill();
+  c.strokeStyle = '#4b5563'; c.lineWidth = 1; c.stroke();
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.moveTo(2, 8); c.lineTo(2, 48); c.stroke();
+  c.fillStyle = '#d97706'; c.fillRect(-11, 50, 22, 6);
+  c.fillStyle = '#7c2d12'; c.fillRect(-6, 56, 12, 34); c.fillStyle = '#9a3412'; c.fillRect(-6, 56, 4, 34);
+  c.fillStyle = '#fbbf24'; for (const y of [64, 76]) { c.beginPath(); c.arc(0, y, 2, 0, 7); c.fill(); }
+  c.fillStyle = '#d97706'; c.beginPath(); c.arc(0, 91, 7, 0, 7); c.fill();
+  c.restore();
+}
+const LG = [
+  { a: '#e0a96d', b: '#8a5a2b', ring: '#a9743a', bark: '#4a2c14' },
+  { a: '#f5f0e6', b: '#cfc6b0', ring: '#d9cfb8', bark: '#f1f5f9', dots: 1 },
+  { a: '#8b5e3c', b: '#3b2412', ring: '#5c3a21', bark: '#26160a' },
+  { a: '#f3cf8c', b: '#c2924a', ring: '#dcae66', bark: '#7c4a1e' },
+  { a: '#d97757', b: '#7c2d12', ring: '#a8452a', bark: '#3f1d0e' },
+  { a: '#c9b48a', b: '#6b5a3a', ring: '#8d7a52', bark: '#5b4b30', moss: 1 }
+];
+function drawLog(c, k, th, CX, CY, RR) {
+  const o = LG[k % 6]; c.save(); c.translate(CX, CY); c.rotate(th);
+  c.beginPath(); c.arc(0, 0, RR, 0, 7); c.fillStyle = o.bark; c.fill();
+  if (o.dots) { c.fillStyle = '#374151'; for (let i = 0; i < 18; i++) { const a = i * .35; c.fillRect(Math.cos(a) * (RR - 3) - 4, Math.sin(a) * (RR - 3) - 1, 8, 2.5); } }
+  const g = c.createRadialGradient(-12, -12, 4, 0, 0, RR - 7); g.addColorStop(0, o.a); g.addColorStop(1, o.b);
+  c.beginPath(); c.arc(0, 0, RR - 7, 0, 7); c.fillStyle = g; c.fill();
+  c.strokeStyle = o.ring; c.lineWidth = 1.6;
+  for (let r = 8; r < RR - 8; r += 7 + (k % 3)) { c.beginPath(); c.ellipse(Math.sin(r) * 1.5, Math.cos(r) * 1.5, r, r * .97, 0, 0, 7); c.stroke(); }
+  c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) { const a = i * 2.1 + k; c.beginPath(); c.moveTo(Math.cos(a) * 8, Math.sin(a) * 8); c.lineTo(Math.cos(a + .05) * (RR - 10), Math.sin(a + .05) * (RR - 10)); c.stroke(); }
+  c.fillStyle = 'rgba(60,30,10,.55)'; c.beginPath(); c.ellipse(18, -14, 6, 4, .6, 0, 7); c.fill();
+  if (o.moss) { c.fillStyle = 'rgba(74,222,128,.55)'; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(Math.cos(i * 1.7 + 1) * (RR - 4), Math.sin(i * 1.7 + 1) * (RR - 4), 5, 0, 7); c.fill(); } }
+  c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.ellipse(-18, -22, 26, 14, -.6, 0, 7); c.fill();
+  c.restore();
 }
 function initKnife() {
   const el = $('#knife');
   el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="ksc">0</b></span><b id="kdf"></b><span id="kkn"></span></div><canvas id="kc" width="360" height="560"></canvas><div class="msg" id="kmsg"></div></div>';
   const cv = $('#kc'), c = cv.getContext('2d'), CX = 180, CY = 190, RR = 72;
-  let th, st, ap, kl, fl, over, won, score = 0, raf, t0, spd, pat, parts;
+  let th, st, ap, kl, fl, over, won, score = 0, raf, t0, spd, pat, parts, kind;
   const AD = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
   function lvl() {
-    const L = lvGet('knife'); kl = Math.min(5 + (L / 2 | 0), 12); st = []; ap = []; th = 0; fl = null; over = 0; won = 0; parts = []; t0 = performance.now();
+    const L = lvGet('knife'); kind = L; kl = Math.min(5 + (L / 2 | 0), 12); st = []; ap = []; th = 0; fl = null; over = 0; won = 0; parts = []; t0 = performance.now();
     const pre = Math.min(L / 2 | 0, 7), na = L % 3 == 0 ? 0 : 1 + L % 2;
     for (let i = 0; i < pre; i++) st.push(i * 6.283 / pre + Math.random() * .2);
     for (let i = 0; i < na; i++) { let a, g = 0; do { a = Math.random() * 6.283; g++; } while (g < 50 && (st.some(s => AD(s, a) < .5) || ap.some(s => AD(s, a) < .5))); ap.push(a); }
@@ -532,9 +602,7 @@ function initKnife() {
     c.clearRect(0, 0, 360, 560);
     if (!won) {
       st.forEach(a => { const A = th + a; c.save(); c.translate(CX + Math.cos(A) * (RR - 14), CY + Math.sin(A) * (RR - 14)); c.rotate(A - Math.PI / 2); dk(c); c.restore(); });
-      const g = c.createRadialGradient(CX - 20, CY - 20, 10, CX, CY, RR); g.addColorStop(0, '#e0a96d'); g.addColorStop(1, '#8a5a2b');
-      c.fillStyle = g; c.beginPath(); c.arc(CX, CY, RR, 0, 7); c.fill(); c.strokeStyle = '#5b3a1a'; c.lineWidth = 4; c.stroke();
-      c.strokeStyle = '#a9743a'; c.lineWidth = 2; for (const r of [18, 36, 54]) { c.beginPath(); c.arc(CX, CY, r, 0, 7); c.stroke(); }
+      drawLog(c, kind, th, CX, CY, RR);
       ap.forEach(a => { const A = th + a, x = CX + Math.cos(A) * (RR + 8), y = CY + Math.sin(A) * (RR + 8); c.fillStyle = '#dc2626'; c.beginPath(); c.arc(x, y, 12, 0, 7); c.fill(); c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(x - 4, y - 4, 3, 0, 7); c.fill(); c.fillStyle = '#16a34a'; c.beginPath(); c.ellipse(x + 3, y - 12, 6, 3, -.5, 0, 7); c.fill(); });
     }
     parts = parts.filter(p => (p.x += p.vx, p.y += p.vy, p.vy += .5, p.y < 700));
@@ -547,7 +615,7 @@ function initKnife() {
   lvl(); loop(); stop = () => cancelAnimationFrame(raf);
 }
 
-/* ---------- MAHJONG ---------- */
+/* ---------- MAHJONG (triple : barre de 9 places) ---------- */
 const FACES = [];
 for (const k of 'cdb') for (let n = 1; n <= 9; n++) FACES.push({ k, n });
 '東南西北'.split('').forEach(t => FACES.push({ k: 'w', t }));
@@ -559,86 +627,67 @@ const faceHTML = f => f.k == 'c' ? `<span style="color:#111">${'一二三四五�
   : f.k == 'w' ? `<span style="color:#111">${f.t}</span>`
   : f.k == 'g' && f.t == '白' ? '<span class="mw"></span>'
   : `<span style="color:${f.col}">${f.t}</span>`;
-function mjLayout(d) {
-  const P = [], add = (x, y, z) => P.push({ x, y, z });
-  const row = (y, x0, x1, z) => { for (let x = x0; x <= x1; x += 2) add(x, y, z); };
-  if (d >= 1) { row(4, 4, 22, 0); row(6, 2, 24, 0); row(8, 2, 24, 0); row(10, 4, 22, 0); }
-  if (d >= 2) { row(0, 2, 24, 0); row(2, 6, 20, 0); row(12, 6, 20, 0); row(14, 2, 24, 0); add(0, 7, 0); add(26, 7, 0); add(28, 7, 0); }
-  for (let y = 2; y <= 12; y += 2) row(y, 8, 18, 1);
-  for (let y = 4; y <= 10; y += 2) row(y, 10, 16, 2);
-  for (const y of [6, 8]) row(y, 12, 14, 3);
-  if (d >= 2) add(13, 7, 4);
-  return P;
-}
-function mjFreeIn(P, alive, i) {
-  const p = P[i]; let l = 0, r = 0;
-  for (const j of alive) {
-    if (j == i) continue; const q = P[j];
-    if (q.z == p.z + 1 && Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2) return 0;
-    if (q.z == p.z && Math.abs(q.y - p.y) < 2) { if (q.x - p.x == -2) l = 1; if (q.x - p.x == 2) r = 1; }
-  }
-  return !(l && r);
-}
-// Distribution garantie résolvable : on "retire" des paires libres au hasard
-function mjDeal(P) {
-  for (let t = 0; t < 80; t++) {
-    const slots = []; FACES.forEach((f, i) => slots.push(i, i)); slots.sort(() => Math.random() - .5);
-    const alive = new Set(P.map((_, i) => i)), res = [];
-    while (alive.size) {
-      const fr = [...alive].filter(i => mjFreeIn(P, alive, i));
-      if (fr.length < 2) break;
-      const a = fr.splice(Math.random() * fr.length | 0, 1)[0], b = fr[Math.random() * fr.length | 0];
-      res[a] = res[b] = slots.pop(); alive.delete(a); alive.delete(b);
-    }
-    if (!alive.size) return res;
-  }
-  return P.map((_, i) => (i >> 1) % 36);
-}
 function initMj() {
   const el = $('#mj');
-  el.innerHTML = '<div class="box wide"><div class="gtop"><span>Points <b id="msc2">0</b></span><b id="mdf"></b><span class="skin"><button id="mhi">Indice</button><button id="msh">Mélanger</button></span></div><div id="mjb"></div><div class="msg" id="mmsg"></div></div>';
-  const bd = $('#mjb'); let P, fc, alive, els, sel = -1, score = 0, busy = 0;
-  const free = i => mjFreeIn(P, alive, i);
-  const pairs = () => { const m = {}; for (const i of alive) if (free(i)) (m[fc[i]] = m[fc[i]] || []).push(i); for (const k in m) if (m[k].length > 1) return m[k]; return null; };
-  const mark = () => els.forEach((e, i) => e.classList.toggle('lk', alive.has(i) && !free(i)));
-  function lvl() {
-    const L = lvGet('mj'), d = L < 3 ? 0 : L < 8 ? 1 : 2;
-    P = mjLayout(d); fc = mjDeal(P); alive = new Set(P.map((_, i) => i)); sel = -1; busy = 0;
-    const u = Math.max(8, Math.min(20, Math.floor((innerWidth - 28) / 31)));
-    bd.style.cssText = `width:${31 * u}px;height:${22 * u}px`;
-    bd.innerHTML = P.map((p, i) => `<div class="mt" data-i="${i}" style="left:${p.x * u - p.z * .4 * u + 4}px;top:${p.y * 1.3 * u - p.z * .4 * u + 4}px;width:${2 * u}px;height:${2.6 * u}px;z-index:${p.z};font-size:${u * 1.05}px">${faceHTML(FACES[fc[i]])}</div>`).join('');
-    els = [...bd.children]; mark(); $('#mdf').textContent = dif(L); $('#mmsg').textContent = '';
-  }
-  function shuffle() {
-    const idx = [...alive], nf = mjDeal(idx.map(i => P[i]));
-    idx.forEach((i, k) => fc[i] = nf[k]);
-    els.forEach((e, i) => { if (alive.has(i)) e.innerHTML = faceHTML(FACES[fc[i]]); e.classList.remove('sl'); }); sel = -1; mark();
-  }
-  bd.onclick = e => {
-    const t = e.target.closest('.mt'); if (!t || busy) return; const i = +t.dataset.i;
-    if (!alive.has(i) || !free(i)) return;
-    if (sel == i) { els[i].classList.remove('sl'); sel = -1; return; }
-    if (sel >= 0 && fc[sel] == fc[i]) {
-      [sel, i].forEach(k => { alive.delete(k); els[k].style.display = 'none'; }); sel = -1;
-      score += 10; $('#msc2').textContent = score; mark();
-      if (!alive.size) { busy = 1; score += 100; $('#msc2').textContent = score; $('#mmsg').textContent = 'Gagné !'; winXP(); lvUp('mj'); setTimeout(lvl, 1600); }
-      else if (!pairs()) { toast('Plus de coups : on mélange !'); shuffle(); }
-      return;
-    }
-    if (sel >= 0) els[sel].classList.remove('sl');
-    sel = i; els[i].classList.add('sl');
+  el.innerHTML = '<div class="box wide"><div class="gtop"><span>Points <b id="msc2">0</b></span><b id="mdf"></b><span class="skin"><button id="mun">Retour</button><button id="msh">Mélanger</button></span></div><div id="mjb"></div><div id="mtr" class="mtr"></div><div class="msg" id="mmsg"></div></div>';
+  const bd = $('#mjb'), tr = $('#mtr'); let T, alive, els, tray, hist, score = 0, busy, over, ts, undo, shf;
+  const blocked = i => { const t = T[i]; return T.some((u, j) => alive.has(j) && u.z > t.z && Math.abs(u.x - t.x) < 1 && Math.abs(u.y - t.y) < 1); };
+  const mark = () => els.forEach((e, i) => e.classList.toggle('lk', alive.has(i) && blocked(i)));
+  const rTray = () => {
+    tr.style.width = 7.6 * ts + 'px';
+    tr.innerHTML = Array.from({ length: 9 }, (_, i) => `<div class="ms" style="height:${ts * 1.1}px">${tray[i] !== undefined ? `<div class="mt tt" style="width:${ts * .8}px;height:${ts * 1.0}px;font-size:${ts * .4}px">${faceHTML(FACES[tray[i]])}</div>` : ''}</div>`).join('');
+    $('#mun').textContent = 'Retour (' + undo + ')'; $('#msh').textContent = 'Mélanger (' + shf + ')';
   };
-  $('#mhi').onclick = () => { const m = pairs(); if (!m) return; [m[0], m[1]].forEach(k => { els[k].classList.add('hn'); setTimeout(() => els[k].classList.remove('hn'), 1300); }); };
-  $('#msh').onclick = () => { if (!busy) shuffle(); };
+  function lvl() {
+    const L = lvGet('mj'), n = Math.min(24 + 3 * L, 120), ty = Math.min(6 + (L / 2 | 0), 20), Z = Math.min(2 + (L / 3 | 0), 5);
+    ts = Math.max(30, Math.min(48, Math.floor((innerWidth - 40) / 7.6)));
+    const W = [.45, .3, .15, .07, .03].slice(0, Z), sw = W.reduce((a, b) => a + b);
+    T = [];
+    for (let z = 0; z < Z; z++) {
+      const off = z % 2 ? .5 : 0, cells = [];
+      for (let i = 0; i < 7 - (z % 2); i++) for (let j = 0; j < 8 - (z % 2); j++) cells.push([i + off, j + off]);
+      cells.sort(() => Math.random() - .5);
+      cells.slice(0, Math.min(cells.length, Math.round(n * W[z] / sw))).forEach(([x, y]) => T.push({ x, y, z }));
+    }
+    T.length -= T.length % 3;
+    const fs = FACES.map((f, i) => i).sort(() => Math.random() - .5).slice(0, ty), list = [];
+    for (let i = 0; i < T.length / 3; i++) { const f = fs[i % fs.length]; list.push(f, f, f); }
+    list.sort(() => Math.random() - .5); T.forEach((t, i) => t.f = list[i]);
+    alive = new Set(T.map((_, i) => i)); tray = []; hist = []; busy = over = 0; undo = 2; shf = 1;
+    bd.style.cssText = `position:relative;margin:auto;width:${7.6 * ts}px;height:${8.7 * ts * 1.2}px`;
+    bd.innerHTML = T.map((t, i) => `<div class="mt" data-i="${i}" style="left:${t.x * ts * 1.03 + 3}px;top:${t.y * ts * 1.2 + 3}px;width:${ts}px;height:${ts * 1.25}px;z-index:${t.z};font-size:${ts * .5}px">${faceHTML(FACES[t.f])}</div>`).join('');
+    els = [...bd.children]; mark(); rTray(); $('#mdf').textContent = dif(L); $('#mmsg').textContent = '';
+  }
+  const win = () => { busy = 1; score += 100; $('#msc2').textContent = score; $('#mmsg').textContent = 'Gagné !'; winXP(); lvUp('mj'); setTimeout(lvl, 1600); };
+  bd.onclick = e => {
+    const t = e.target.closest('.mt'); if (!t || busy || over) return; const i = +t.dataset.i;
+    if (!alive.has(i) || blocked(i)) return;
+    alive.delete(i); els[i].style.display = 'none'; hist.push(i);
+    const f = T[i].f; let pos = tray.lastIndexOf(f); pos = pos < 0 ? tray.length : pos + 1; tray.splice(pos, 0, f); rTray(); mark();
+    if (tray.filter(x => x == f).length == 3) {
+      busy = 1;
+      setTimeout(() => { tray = tray.filter(x => x != f); hist = hist.filter(h => T[h].f != f); score += 30; $('#msc2').textContent = score; rTray(); busy = 0; if (!alive.size) win(); }, 350);
+    } else if (tray.length >= 9) { over = 1; $('#mmsg').textContent = 'Barre pleine ! Touche ici pour rejouer'; }
+  };
+  $('#mmsg').onclick = () => { if (over) lvl(); };
+  $('#mun').onclick = () => {
+    if (busy || over || !undo || !hist.length) return;
+    const h = hist.pop(); tray.splice(tray.lastIndexOf(T[h].f), 1); alive.add(h); els[h].style.display = ''; undo--; rTray(); mark();
+  };
+  $('#msh').onclick = () => {
+    if (busy || over || !shf) return; shf--;
+    const idx = [...alive], fs = idx.map(i => T[i].f).sort(() => Math.random() - .5);
+    idx.forEach((i, k) => { T[i].f = fs[k]; els[i].innerHTML = faceHTML(FACES[fs[k]]); }); rTray();
+  };
   lvl();
 }
 
-/* ---------- SOLITAIRE ---------- */
+/* ---------- SOLITAIRE (glisser-déposer) ---------- */
 function initSolo() {
   const el = $('#solo');
   el.innerHTML = '<div class="box wide"><div class="gtop"><span>Points <b id="osc">0</b></span><span class="skin"><button id="onew">Nouvelle partie</button></span></div><div id="ob" class="ob"></div><div class="msg" id="omsg"></div></div>';
   const ob = $('#ob'), SU = ['♠', '♥', '♦', '♣'], RK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-  let S, W, F, T, sel, score, won;
+  let S, W, F, T, sel, score, won, cw = 50, ch = 70, drag = null, sup = 0;
   const red = s => s == 1 || s == 2;
   const pile = p => p == 's' ? S : p == 'w' ? W : p[0] == 'f' ? F[+p[1]] : T[+p[1]];
   const deal = () => {
@@ -655,24 +704,33 @@ function initSolo() {
     if (s.p[0] == 't' && from.length && !from[from.length - 1].up) { from[from.length - 1].up = 1; score += 5; }
     return 1;
   };
+  const card = (c, p, i, top, ex) => `<div class="cd${c.up ? (red(c.s) ? ' rd' : '') : ' dn'}${ex || ''}" data-p="${p}" data-i="${i}" style="top:${top}px;width:${cw}px;height:${ch}px">${c.up ? `<b>${RK[c.r]}${SU[c.s]}</b><u>${SU[c.s]}</u>` : ''}</div>`;
   const render = () => {
-    const cw = (ob.clientWidth - 20 - 36) / 7, ch = cw * 1.4;
-    const card = (c, p, i, top) => `<div class="cd${c.up ? (red(c.s) ? ' rd' : '') : ' dn'}${sel && sel.p == p && i >= sel.i ? ' sl' : ''}" data-p="${p}" data-i="${i}" style="top:${top}px;width:${cw}px;height:${ch}px">${c.up ? `<b>${RK[c.r]}${SU[c.s]}</b><u>${SU[c.s]}</u>` : ''}</div>`;
+    cw = (ob.clientWidth - 20 - 36) / 7; ch = cw * 1.4;
+    const sc = (p, i) => sel && sel.p == p && i >= sel.i ? ' sl' : '';
     const pl = (p, h, inner) => `<div class="pl" data-p="${p}" style="height:${h}px">${inner}</div>`;
     let h = pl('s', ch, S.length ? card({ up: 0 }, 's', S.length - 1, 0) : '');
-    h += pl('w', ch, W.length ? card(W[W.length - 1], 'w', W.length - 1, 0) : '') + '<div></div>';
-    for (let k = 0; k < 4; k++) h += pl('f' + k, ch, F[k].length ? card(F[k][F[k].length - 1], 'f' + k, F[k].length - 1, 0) : '');
+    h += pl('w', ch, W.length ? card(W[W.length - 1], 'w', W.length - 1, 0, sc('w', W.length - 1)) : '') + '<div></div>';
+    for (let k = 0; k < 4; k++) h += pl('f' + k, ch, F[k].length ? card(F[k][F[k].length - 1], 'f' + k, F[k].length - 1, 0, sc('f' + k, F[k].length - 1)) : '');
     for (let j = 0; j < 7; j++) {
-      let top = 0; const inner = T[j].map((c, i) => { const s = card(c, 't' + j, i, top); top += c.up ? ch * .3 : ch * .13; return s; }).join('');
+      let top = 0; const inner = T[j].map((c, i) => { const s = card(c, 't' + j, i, top, sc('t' + j, i)); top += c.up ? ch * .3 : ch * .13; return s; }).join('');
       h += pl('t' + j, Math.max(ch, top + ch * .7), inner);
     }
     ob.innerHTML = h; $('#osc').textContent = score;
     if (!won && F.every(f => f.length == 13)) { won = 1; score += 200; $('#osc').textContent = score; $('#omsg').textContent = 'Gagné !'; winXP(); }
   };
+  const flash = (p, s) => {
+    render(); const q = ob.querySelector(`.pl[data-p="${p}"]`); if (q) q.classList.add('bad');
+    ob.querySelectorAll(`.cd[data-p="${s.p}"]`).forEach(c => { if (+c.dataset.i >= s.i) c.classList.add('bd'); });
+  };
   ob.onclick = e => {
+    if (sup) return;
     const t = e.target.closest('[data-p]'); if (!t) return; const p = t.dataset.p, i = t.dataset.i === undefined ? -1 : +t.dataset.i;
     if (p == 's') { if (S.length) { const c = S.pop(); c.up = 1; W.push(c); } else { S = W.reverse(); S.forEach(c => c.up = 0); W = []; } sel = null; return render(); }
-    if (sel && p != sel.p && move(sel, p)) { sel = null; return render(); }
+    if (sel && p != sel.p) {
+      if (move(sel, p)) { sel = null; return render(); }
+      if (p[0] == 't' || p[0] == 'f') { const s0 = sel; sel = null; return flash(p, s0); }
+    }
     const pl = pile(p), c = pl[i];
     if (c && !c.up && p[0] == 't' && i == pl.length - 1) { c.up = 1; score += 5; sel = null; }
     else if (c && c.up && (p[0] == 't' || i == pl.length - 1)) sel = (sel && sel.p == p && sel.i == i) ? null : { p, i };
@@ -684,6 +742,32 @@ function initSolo() {
     const pl = pile(p); if (+t.dataset.i != pl.length - 1) return;
     for (let k = 0; k < 4; k++) if (move({ p, i: pl.length - 1 }, 'f' + k)) { sel = null; render(); return; }
   };
+  ob.onpointerdown = e => {
+    const t = e.target.closest('.cd'); if (!t || t.classList.contains('dn')) return;
+    const p = t.dataset.p, i = +t.dataset.i; if (p == 's') return;
+    const pl = pile(p); if (p[0] != 't' && i != pl.length - 1) return;
+    const r = t.getBoundingClientRect(); drag = { p, i, x: e.clientX, y: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, on: 0 };
+  };
+  const mv = e => {
+    if (!drag) return;
+    if (!drag.on) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+      drag.on = 1; sel = null;
+      const g = document.createElement('div'); g.className = 'dgh'; g.style.width = cw + 'px';
+      g.innerHTML = pile(drag.p).slice(drag.i).map((c, k) => card(c, 'x', k, k * ch * .3, '')).join(''); document.body.append(g); drag.g = g;
+      ob.querySelectorAll(`.cd[data-p="${drag.p}"]`).forEach(c => { if (+c.dataset.i >= drag.i) c.classList.add('hid'); });
+    }
+    drag.g.style.left = (e.clientX - drag.ox) + 'px'; drag.g.style.top = (e.clientY - drag.oy) + 'px';
+  };
+  const up = e => {
+    if (!drag) return; const d = drag; drag = null; if (!d.on) return;
+    d.g.style.display = 'none'; const tp = document.elementFromPoint(e.clientX, e.clientY), tg = tp && tp.closest('#ob [data-p]'); d.g.remove();
+    sup = 1; setTimeout(() => sup = 0, 60);
+    const p2 = tg && tg.dataset.p;
+    if (p2 && p2 != d.p && p2 != 's' && p2 != 'w') { if (move({ p: d.p, i: d.i }, p2)) render(); else flash(p2, { p: d.p, i: d.i }); } else render();
+  };
+  document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up);
+  stop = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); };
   $('#onew').onclick = () => { deal(); render(); };
   deal(); render();
 }
