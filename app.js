@@ -1,27 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, orderBy, onSnapshot, serverTimestamp, runTransaction, deleteDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDecLiaNoWpJSqfIV7DCPNdD8Y0iPoPT6A",
-  authDomain: "pexi-play.firebaseapp.com",
-  databaseURL: "https://pexi-play-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "pexi-play",
-  storageBucket: "pexi-play.firebasestorage.app",
-  messagingSenderId: "175370623468",
-  appId: "1:175370623468:web:82b66d44cac69b6502c8c9",
-  measurementId: "G-JFNB7XSXPL"
-};
-const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
-const ADMIN_EMAIL = "pc2alex.les@gmail.com";
-const PAYPAL_URL = "https://www.paypal.com/paypalme/SH0PNOVA/";
-window.PEXI = { user: null, saveBalance: async value => {
-  if (!auth.currentUser) return;
-  await setDoc(doc(db,"users",auth.currentUser.uid), { credits:value, updatedAt:serverTimestamp() }, {merge:true});
-}};
-
 // Abréviations : 1K = mille, 1M = million, 1B = milliard, 1T = mille milliards...
 const fmt = v => {
   const u = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
@@ -32,14 +8,13 @@ const fmt = v => {
 };
 const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
-let bal = 1, stop = () => {};
-try { const sv = localStorage.getItem('mj_bal'); if (sv !== null) bal = Math.max(1, Math.floor(+sv || 1)); } catch (e) {}
+let bal = 1000, stop = () => {};
+try { const sv = localStorage.getItem('mj_bal'); if (sv !== null) bal = Math.max(1, +sv || 1); } catch (e) {}
 
 function setBal(v) {
-  bal = Math.max(1, Math.floor(Number(v) || 1));
+  bal = Math.max(1, Math.round(v * 100) / 100); // jamais en dessous de 1 crédit
   $('#bal').textContent = fmt(bal);
   try { localStorage.setItem('mj_bal', bal); } catch (e) {}
-  if (window.PEXI && window.PEXI.user) window.PEXI.saveBalance(bal).catch(err => console.error(err));
 }
 function show(id) {
   stop(); stop = () => {};
@@ -68,14 +43,13 @@ function setup(id, extra) {
       q('.msg').textContent = 'Gagné : +' + fmt(w) + ' crédits';
       const d = document.createElement('div'); d.className = 'wb';
       d.innerHTML = `<b>+${fmt(w)}</b><small>GAGNÉ !</small>`;
-      q('.stage').append(d); setTimeout(() => d.remove(), 2000);
+      q('.stage').append(d); setTimeout(() => d.remove(), 2000); winXP();
     },
     run: v => {
       el.querySelectorAll('.ctl input,.ctl select,.q button').forEach(x => x.disabled = v);
       q('.go').disabled = v; q('.out').disabled = !v;
     },
     take: () => {
-      if (!auth.currentUser) { alert('Connecte-toi pour jouer.'); setPage('wallet'); return 0; }
       const s = Math.floor(+q('.stk').value);
       if (!(s >= 1) || s > bal) { q('.msg').textContent = 'Crédits insuffisants'; return 0; }
       setBal(bal - s); q('.msg').textContent = ''; return s;
@@ -276,9 +250,9 @@ function drawIt(c, x, y, r, l, sq, age) {
 
 function initMerge() {
   const el = $('#merge');
-  el.innerHTML = '<div class="box"><div class="betbar"><label>Mise <input id="mergeBet" type="number" min="1" value="10"></label><button id="mergeStart">MISER ET JOUER</button><b id="mergeState">En attente de mise</b></div><div class="mtop"><b id="msc">0</b><span><button data-s="0" class="on">Fruit Merge</button><button data-s="1">Squishie Merge</button></span></div><canvas id="mc" width="360" height="540"></canvas><div class="msg">Touche l\'écran pour lâcher. Deux pareils fusionnent !</div></div>';
+  el.innerHTML = '<div class="box"><div class="mtop"><b id="msc">0</b><span><button data-s="0" class="on">Fruit Merge</button><button data-s="1">Squishie Merge</button></span></div><canvas id="mc" width="360" height="540"></canvas><div class="msg">Touche l\'écran pour lâcher. Deux pareils fusionnent !</div></div>';
   const cv = $('#mc'), c = cv.getContext('2d'), W = 360, H = 540, LINE = 90;
-  let it, score, next, aim = W / 2, cd, over, danger, skin = 0, raf, stake = 0, active = false;
+  let it, score, next, aim = W / 2, cd, over, danger, skin = 0, raf;
   const rnd = () => Math.random() * 4 | 0;
   const reset = () => { it = []; score = 0; next = rnd(); cd = 0; over = 0; danger = 0; $('#msc').textContent = 0; };
   const add = (x, y, l) => it.push({ x, y, vx: 0, vy: 0, l, r: R[l], age: 0 });
@@ -308,7 +282,7 @@ function initMerge() {
     }
     it = it.filter(a => !a.dead);
     danger = it.some(a => a.age > 90 && a.y - a.r < LINE && Math.abs(a.vy) < 1) ? danger + 1 : 0;
-    if (danger > 120) { over = 1; if(active){const gain=Math.floor(stake*(1+score/500));setBal(bal+gain);$('#mergeState').textContent='Gain : '+fmt(gain)+' pièces';active=false;} }
+    if (danger > 120) over = 1;
   }
   function draw() {
     c.clearRect(0, 0, W, H);
@@ -324,7 +298,7 @@ function initMerge() {
   cv.onpointermove = px;
   cv.onpointerdown = px;
   cv.onpointerup = e => {
-    px(e); if (!active) return; if (over) { reset(); active=false; return; }
+    px(e); if (over) { reset(); return; }
     if (cd > 0) return;
     add(Math.max(R[next], Math.min(W - R[next], aim)), 40, next); next = rnd(); cd = 35;
   };
@@ -332,7 +306,7 @@ function initMerge() {
     skin = +b.dataset.s; el.querySelectorAll('[data-s]').forEach(x => x.classList.toggle('on', x == b)); bg();
   });
   const loop = () => { step(); draw(); raf = requestAnimationFrame(loop); };
-  reset(); bg(); $('#mergeStart').onclick=()=>{if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#mergeBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}stake=v;setBal(bal-v);active=true;$('#mergeState').textContent='Partie en cours';reset();}; loop();
+  reset(); bg(); loop();
   stop = () => cancelAnimationFrame(raf);
 }
 
@@ -340,10 +314,10 @@ function initMerge() {
 const WL = 'CHAT CHIEN LAPIN POULE VACHE CHEVAL RENARD TIGRE PANDA ZEBRE LION SINGE OURS LOUP CERF PIZZA FRAISE CITRON BANANE POMME CERISE MELON TOMATE CAROTTE BOUGIE TABLE CHAISE LIVRE STYLO CLAVIER ECRAN SOURIS VOITURE AVION BATEAU TRAIN VELO MOTO SOLEIL NUAGE ETOILE LUNE PLAGE FORET RIVIERE MONTAGNE JARDIN FLEUR ARBRE FROMAGE CHOCOLAT GATEAU BONBON PAIN LAIT ROBOT PIRATE DRAGON FUSEE GUITARE PIANO TAMBOUR CINEMA MUSIQUE ECOLE MAISON CHATEAU PONT CLOWN'.split(' ');
 function initWords() {
   const el = $('#words');
-  el.innerHTML = '<div class="box"><h2 class="wtt">Mots Mêlés</h2><p class="wtt">Mise <input id="wordsBet" type="number" min="1" value="10"></p><p class="wtt">Choisis la difficulté</p><div class="ctl"><button data-d="0">Facile — 8×8, 6 mots</button><button data-d="1">Moyen — 11×11, 10 mots</button><button data-d="2">Difficile — 14×14, 16 mots</button></div></div>';
-  let tm, wordStake=0;
+  el.innerHTML = '<div class="box"><h2 class="wtt">Mots Mêlés</h2><p class="wtt">Choisis la difficulté</p><div class="ctl"><button data-d="0">Facile — 8×8, 6 mots</button><button data-d="1">Moyen — 11×11, 10 mots</button><button data-d="2">Difficile — 14×14, 16 mots</button></div></div>';
+  let tm;
   stop = () => clearInterval(tm);
-  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#wordsBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}wordStake=v;setBal(bal-v);play(+b.dataset.d);});
+  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => play(+b.dataset.d));
   function play(d) {
     clearInterval(tm);
     const N = [8, 11, 14][d], cnt = [6, 10, 16][d];
@@ -386,7 +360,7 @@ function initWords() {
       if (hit) {
         $(`[data-w="${hit}"]`).classList.add('ok');
         sel.forEach(i => { cs[i].classList.add('found'); cs[i].style.setProperty('--c', `hsl(${hues[found % 8]},70%,45%)`); });
-        if (++found == words.length) { clearInterval(tm); const gain=wordStake*2;setBal(bal+gain);$('#wm').textContent = 'Bravo ! Gain : '+fmt(gain)+' pièces — '+$('#wtm').textContent; }
+        if (++found == words.length) { clearInterval(tm); $('#wm').textContent = 'Bravo ! Trouvé en ' + $('#wtm').textContent; }
       }
       cs.forEach(c => c.classList.remove('sel')); s = -1; sel = [];
     };
@@ -399,9 +373,9 @@ const SHP = ['1', '11', '111', '1111', '11111', '1/1', '1/1/1', '1/1/1/1', '1/1/
 const BCOL = ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#22d3ee', '#818cf8', '#e879f9'];
 function initBlast() {
   const el = $('#blast');
-  el.innerHTML = '<div class="box"><div class="betbar"><label>Mise <input id="blastBet" type="number" min="1" value="10"></label><button id="blastStart">MISER ET JOUER</button><b id="blastState">En attente de mise</b></div><div class="bs"><div>Score <b id="bsc">0</b></div><div>Record <b id="bbest">0</b></div></div><div id="bb" class="bb"></div><div id="tr" class="tr"></div><div class="msg" id="bm"></div></div>';
+  el.innerHTML = '<div class="box"><div class="bs"><div>Score <b id="bsc">0</b></div><div>Record <b id="bbest">0</b></div></div><div id="bb" class="bb"></div><div id="tr" class="tr"></div><div class="msg" id="bm"></div></div>';
   const N = 8, bb = $('#bb'), tr = $('#tr');
-  let B, score, best = 0, P, ended, blastStake=0, blastActive=false;
+  let B, score, best = 0, P, ended;
   for (let i = 0; i < 64; i++) { const d = document.createElement('div'); d.className = 'bc'; bb.append(d); }
   const cells = [...bb.children];
   const paint = () => cells.forEach((d, i) => { d.className = 'bc' + (B[i] ? ' f' : ''); d.style.setProperty('--c', B[i] || 'transparent'); });
@@ -414,7 +388,7 @@ function initBlast() {
   const tray = () => { tr.innerHTML = ''; P.forEach((p, i) => { const s = document.createElement('div'); s.className = 'slot'; if (p) { const d = mk(p); d.onpointerdown = e => drag(e, i); s.append(d); } tr.append(s); }); };
   const reset = () => { B = Array(64).fill(null); score = 0; ended = 0; P = [rndP(), rndP(), rndP()]; $('#bsc').textContent = 0; $('#bm').textContent = ''; paint(); tray(); };
   function drag(e, i) {
-    if (ended || !blastActive) return; e.preventDefault();
+    if (ended) return; e.preventDefault();
     const p = P[i], pitch = bb.getBoundingClientRect().width / N, g = mk(p, 'gh');
     g.style.setProperty('--cs', (pitch - 6) + 'px'); document.body.append(g);
     const gw = p.s[0].length * pitch, gh = p.s.length * pitch; let tr0 = -9, tc0 = -9;
@@ -447,94 +421,278 @@ function initBlast() {
     kill.forEach(k => cells[k].classList.add('clr'));
     setTimeout(() => {
       kill.forEach(k => B[k] = null); paint();
-      if (!P.some(x => x && can(x))) { ended = 1; $('#bm').textContent = 'Plus de place !'; if(blastActive){const gain=Math.floor(blastStake*(1+score/250));setBal(bal+gain);$('#blastState').textContent='Gain : '+fmt(gain)+' pièces';blastActive=false;} }
+      if (!P.some(x => x && can(x))) { ended = 1; $('#bm').textContent = 'Plus de place ! Touche ici pour rejouer'; }
     }, L ? 260 : 0);
   }
   $('#bm').onclick = () => { if (ended) reset(); };
-  $('#blastStart').onclick=()=>{if(!auth.currentUser){alert('Connecte-toi pour jouer.');setPage('wallet');return;}const v=Math.floor(+$('#blastBet').value);if(v<1||v>bal){alert('Mise invalide ou pièces insuffisantes.');return;}blastStake=v;setBal(bal-v);blastActive=true;$('#blastState').textContent='Partie en cours';reset();};
   reset();
 }
 
+/* ---------- XP (barre de progression) & difficulté ---------- */
+let xp = 0, cyc = 0;
+try { xp = +localStorage.getItem('mj_xp') || 0; cyc = +localStorage.getItem('mj_cyc') || 0; } catch (e) {}
+const xpShow = () => { $('#xpb').style.width = (xp * 2) + '%'; $('#xpt').textContent = 'XP ' + xp + '/50'; };
+function toast(t, big) {
+  const d = document.createElement('div'); d.className = 'toast' + (big ? ' big' : ''); d.textContent = t;
+  document.body.append(d); setTimeout(() => d.remove(), big ? 3500 : 2200);
+}
+// L'XP est rare et de plus en plus difficile à gagner ; barre pleine = 50K pièces
+function winXP() {
+  if (Math.random() >= Math.max(.03, .5 * Math.pow(.94, xp) * Math.pow(.8, cyc))) return;
+  xp++; let t = '+1 XP';
+  if (xp >= 50) { xp = 0; cyc++; setBal(bal + 50000); t = 'BARRE PLEINE ! +50K pièces'; }
+  try { localStorage.setItem('mj_xp', xp); localStorage.setItem('mj_cyc', cyc); } catch (e) {}
+  xpShow(); toast(t, xp == 0);
+}
+const LV = {};
+const lvGet = k => { if (LV[k] === undefined) { try { LV[k] = +localStorage.getItem('mj_l_' + k) || 0; } catch (e) { LV[k] = 0; } } return LV[k]; };
+const lvUp = k => { LV[k] = lvGet(k) + 1; try { localStorage.setItem('mj_l_' + k, LV[k]); } catch (e) {} };
+const dif = L => L < 3 ? 'Facile' : L < 8 ? 'Moyen' : L < 15 ? 'Difficile' : L < 25 ? 'Expert' : 'Extrême';
+
+/* ---------- WATER SORT ---------- */
+const WCOL = ['#ef4444', '#f97316', '#facc15', '#84cc16', '#16a34a', '#06b6d4', '#2563eb', '#8b5cf6', '#ec4899', '#92400e', '#cbd5e1', '#0f172a'];
+const WSYM = ['●', '▲', '■', '★', '♦', '♥', '♣', '♠', '✚', '☀', '☾', '✿'];
+function initWater() {
+  const el = $('#water');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="wsc">0</b></span><b id="wdf"></b><span class="skin"><button data-k="tube" class="on">Tube</button><button data-k="bottle">Bouteille</button><button data-k="vase">Vase</button></span></div><div id="wt" class="wt tube"></div><div class="ctl"><button id="wun">Annuler</button><button id="wrs">Recommencer</button><button id="wsy" class="on">Symboles</button></div><div class="msg" id="wmsg"></div></div>';
+  const wt = $('#wt'); let T, sel = -1, hist = [], init0, score = 0, busy = 0;
+  const render = () => {
+    wt.innerHTML = T.map((t, i) => `<div class="tb${i == sel ? ' up' : ''}" data-i="${i}"><div class="lqs">${t.map(c => `<div class="lq" style="--c:${WCOL[c]}"><s>${WSYM[c]}</s></div>`).join('')}</div></div>`).join('');
+  };
+  const gen = () => {
+    const L = lvGet('water'), n = Math.min(3 + (L / 2 | 0), 12), pool = [];
+    for (let c = 0; c < n; c++) for (let k = 0; k < 4; k++) pool.push(c);
+    pool.sort(() => Math.random() - .5);
+    T = []; for (let i = 0; i < n; i++) T.push(pool.slice(i * 4, i * 4 + 4));
+    T.push([], []); init0 = JSON.stringify(T); hist = []; sel = -1; busy = 0;
+    $('#wdf').textContent = dif(L); $('#wmsg').textContent = ''; render();
+  };
+  const check = () => {
+    if (!T.every(t => !t.length || (t.length == 4 && t.every(x => x == t[0])))) return;
+    busy = 1; score += 200; $('#wsc').textContent = score; $('#wmsg').textContent = 'Gagné !';
+    winXP(); lvUp('water'); setTimeout(gen, 1400);
+  };
+  wt.onclick = e => {
+    const tb = e.target.closest('.tb'); if (!tb || busy) return; const i = +tb.dataset.i;
+    if (sel < 0) { if (T[i].length) { sel = i; render(); } return; }
+    if (sel == i) { sel = -1; render(); return; }
+    const a = T[sel], b = T[i], c = a[a.length - 1];
+    if (b.length < 4 && (!b.length || b[b.length - 1] == c)) {
+      hist.push(JSON.stringify(T));
+      while (a.length && a[a.length - 1] == c && b.length < 4) b.push(a.pop());
+      sel = -1; score += 10; $('#wsc').textContent = score; render(); check();
+    } else { sel = T[i].length ? i : -1; render(); }
+  };
+  $('#wun').onclick = () => { if (hist.length && !busy) { T = JSON.parse(hist.pop()); sel = -1; render(); } };
+  $('#wrs').onclick = () => { if (!busy) { T = JSON.parse(init0); hist = []; sel = -1; render(); } };
+  $('#wsy').onclick = e => { wt.classList.toggle('nosym'); e.target.classList.toggle('on'); };
+  el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    wt.className = 'wt ' + b.dataset.k + (wt.classList.contains('nosym') ? ' nosym' : '');
+    el.querySelectorAll('[data-k]').forEach(x => x.classList.toggle('on', x == b));
+  });
+  gen();
+}
+
+/* ---------- KNIFE HIT ---------- */
+function dk(c) {
+  const g = c.createLinearGradient(-7, 0, 7, 0); g.addColorStop(0, '#e5e7eb'); g.addColorStop(.5, '#fff'); g.addColorStop(1, '#9ca3af');
+  c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.lineTo(7, 16); c.lineTo(7, 50); c.lineTo(-7, 50); c.lineTo(-7, 16); c.closePath(); c.fill();
+  c.fillStyle = '#fbbf24'; c.fillRect(-10, 48, 20, 6); c.fillStyle = '#7c2d12'; c.fillRect(-5, 54, 10, 34);
+}
+function initKnife() {
+  const el = $('#knife');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="ksc">0</b></span><b id="kdf"></b><span id="kkn"></span></div><canvas id="kc" width="360" height="560"></canvas><div class="msg" id="kmsg"></div></div>';
+  const cv = $('#kc'), c = cv.getContext('2d'), CX = 180, CY = 190, RR = 72;
+  let th, st, ap, kl, fl, over, won, score = 0, raf, t0, spd, pat, parts;
+  const AD = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  function lvl() {
+    const L = lvGet('knife'); kl = Math.min(5 + (L / 2 | 0), 12); st = []; ap = []; th = 0; fl = null; over = 0; won = 0; parts = []; t0 = performance.now();
+    const pre = Math.min(L / 2 | 0, 7), na = L % 3 == 0 ? 0 : 1 + L % 2;
+    for (let i = 0; i < pre; i++) st.push(i * 6.283 / pre + Math.random() * .2);
+    for (let i = 0; i < na; i++) { let a, g = 0; do { a = Math.random() * 6.283; g++; } while (g < 50 && (st.some(s => AD(s, a) < .5) || ap.some(s => AD(s, a) < .5))); ap.push(a); }
+    spd = (1.3 + L * .1) * (Math.random() < .5 ? 1 : -1); pat = L > 3 ? 1 + L % 3 : 0;
+    $('#kdf').textContent = dif(L); $('#kmsg').textContent = 'Touche pour lancer un couteau';
+  }
+  const burst = (x, y, n, col, v) => { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - .5) * v, vy: (Math.random() - .5) * v - 2, col }); };
+  function tick(now) {
+    if (!over && !won) th += spd * (1 + (pat ? .8 * Math.sin((now - t0) * .0015 * pat) : 0)) * .016;
+    if (fl && !fl.fall) {
+      fl.y -= 26;
+      if (fl.y <= CY + RR + 2) {
+        const rel = Math.PI / 2 - th;
+        if (st.some(s => AD(s, rel) < .27)) { fl.fall = 1; fl.r = 0; over = 1; $('#kmsg').textContent = 'Raté ! Touche pour rejouer'; }
+        else {
+          st.push(rel); score++;
+          ap = ap.filter(a => { if (AD(a, rel) < .32) { score += 3; burst(CX + Math.cos(th + a) * (RR + 8), CY + Math.sin(th + a) * (RR + 8), 12, '#ef4444', 8); return false; } return true; });
+          fl = null; $('#ksc').textContent = score;
+          if (!kl) { won = 1; burst(CX, CY, 50, '#b45309', 16); score += 10; $('#ksc').textContent = score; $('#kmsg').textContent = 'Gagné !'; winXP(); lvUp('knife'); setTimeout(lvl, 1500); }
+        }
+      }
+    } else if (fl && fl.fall) { fl.y += 18; fl.r += .4; }
+    c.clearRect(0, 0, 360, 560);
+    if (!won) {
+      st.forEach(a => { const A = th + a; c.save(); c.translate(CX + Math.cos(A) * (RR - 14), CY + Math.sin(A) * (RR - 14)); c.rotate(A - Math.PI / 2); dk(c); c.restore(); });
+      const g = c.createRadialGradient(CX - 20, CY - 20, 10, CX, CY, RR); g.addColorStop(0, '#e0a96d'); g.addColorStop(1, '#8a5a2b');
+      c.fillStyle = g; c.beginPath(); c.arc(CX, CY, RR, 0, 7); c.fill(); c.strokeStyle = '#5b3a1a'; c.lineWidth = 4; c.stroke();
+      c.strokeStyle = '#a9743a'; c.lineWidth = 2; for (const r of [18, 36, 54]) { c.beginPath(); c.arc(CX, CY, r, 0, 7); c.stroke(); }
+      ap.forEach(a => { const A = th + a, x = CX + Math.cos(A) * (RR + 8), y = CY + Math.sin(A) * (RR + 8); c.fillStyle = '#dc2626'; c.beginPath(); c.arc(x, y, 12, 0, 7); c.fill(); c.fillStyle = 'rgba(255,255,255,.5)'; c.beginPath(); c.arc(x - 4, y - 4, 3, 0, 7); c.fill(); c.fillStyle = '#16a34a'; c.beginPath(); c.ellipse(x + 3, y - 12, 6, 3, -.5, 0, 7); c.fill(); });
+    }
+    parts = parts.filter(p => (p.x += p.vx, p.y += p.vy, p.vy += .5, p.y < 700));
+    parts.forEach(p => { c.fillStyle = p.col; c.fillRect(p.x, p.y, 6, 6); });
+    if (!won && (kl > 0 || fl)) { c.save(); c.translate(CX, fl ? fl.y : 470); if (fl && fl.fall) c.rotate(fl.r); dk(c); c.restore(); }
+    $('#kkn').textContent = 'Couteaux : ' + kl;
+  }
+  const loop = now => { tick(now); raf = requestAnimationFrame(loop); };
+  cv.onpointerdown = () => { if (over) return lvl(); if (won) return; if (!fl && kl > 0) { fl = { y: 470 }; kl--; } };
+  lvl(); loop(); stop = () => cancelAnimationFrame(raf);
+}
+
+/* ---------- MAHJONG ---------- */
+const FACES = [];
+for (const k of 'cdb') for (let n = 1; n <= 9; n++) FACES.push({ k, n });
+'東南西北'.split('').forEach(t => FACES.push({ k: 'w', t }));
+[['中', '#dc2626'], ['發', '#16a34a'], ['白', '#2563eb']].forEach(([t, col]) => FACES.push({ k: 'g', t, col }));
+FACES.push({ k: 'f', t: '✿', col: '#db2777' }, { k: 'f', t: '❁', col: '#ea580c' });
+const faceHTML = f => f.k == 'c' ? `<span style="color:#111">${'一二三四五六七八九'[f.n - 1]}</span><span style="color:#dc2626">萬</span>`
+  : f.k == 'd' ? `<div class="md">${'<i></i>'.repeat(f.n)}</div>`
+  : f.k == 'b' ? `<div class="mb">${'<i></i>'.repeat(f.n)}</div>`
+  : f.k == 'w' ? `<span style="color:#111">${f.t}</span>`
+  : f.k == 'g' && f.t == '白' ? '<span class="mw"></span>'
+  : `<span style="color:${f.col}">${f.t}</span>`;
+function mjLayout(d) {
+  const P = [], add = (x, y, z) => P.push({ x, y, z });
+  const row = (y, x0, x1, z) => { for (let x = x0; x <= x1; x += 2) add(x, y, z); };
+  if (d >= 1) { row(4, 4, 22, 0); row(6, 2, 24, 0); row(8, 2, 24, 0); row(10, 4, 22, 0); }
+  if (d >= 2) { row(0, 2, 24, 0); row(2, 6, 20, 0); row(12, 6, 20, 0); row(14, 2, 24, 0); add(0, 7, 0); add(26, 7, 0); add(28, 7, 0); }
+  for (let y = 2; y <= 12; y += 2) row(y, 8, 18, 1);
+  for (let y = 4; y <= 10; y += 2) row(y, 10, 16, 2);
+  for (const y of [6, 8]) row(y, 12, 14, 3);
+  if (d >= 2) add(13, 7, 4);
+  return P;
+}
+function mjFreeIn(P, alive, i) {
+  const p = P[i]; let l = 0, r = 0;
+  for (const j of alive) {
+    if (j == i) continue; const q = P[j];
+    if (q.z == p.z + 1 && Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2) return 0;
+    if (q.z == p.z && Math.abs(q.y - p.y) < 2) { if (q.x - p.x == -2) l = 1; if (q.x - p.x == 2) r = 1; }
+  }
+  return !(l && r);
+}
+// Distribution garantie résolvable : on "retire" des paires libres au hasard
+function mjDeal(P) {
+  for (let t = 0; t < 80; t++) {
+    const slots = []; FACES.forEach((f, i) => slots.push(i, i)); slots.sort(() => Math.random() - .5);
+    const alive = new Set(P.map((_, i) => i)), res = [];
+    while (alive.size) {
+      const fr = [...alive].filter(i => mjFreeIn(P, alive, i));
+      if (fr.length < 2) break;
+      const a = fr.splice(Math.random() * fr.length | 0, 1)[0], b = fr[Math.random() * fr.length | 0];
+      res[a] = res[b] = slots.pop(); alive.delete(a); alive.delete(b);
+    }
+    if (!alive.size) return res;
+  }
+  return P.map((_, i) => (i >> 1) % 36);
+}
+function initMj() {
+  const el = $('#mj');
+  el.innerHTML = '<div class="box wide"><div class="gtop"><span>Points <b id="msc2">0</b></span><b id="mdf"></b><span class="skin"><button id="mhi">Indice</button><button id="msh">Mélanger</button></span></div><div id="mjb"></div><div class="msg" id="mmsg"></div></div>';
+  const bd = $('#mjb'); let P, fc, alive, els, sel = -1, score = 0, busy = 0;
+  const free = i => mjFreeIn(P, alive, i);
+  const pairs = () => { const m = {}; for (const i of alive) if (free(i)) (m[fc[i]] = m[fc[i]] || []).push(i); for (const k in m) if (m[k].length > 1) return m[k]; return null; };
+  const mark = () => els.forEach((e, i) => e.classList.toggle('lk', alive.has(i) && !free(i)));
+  function lvl() {
+    const L = lvGet('mj'), d = L < 3 ? 0 : L < 8 ? 1 : 2;
+    P = mjLayout(d); fc = mjDeal(P); alive = new Set(P.map((_, i) => i)); sel = -1; busy = 0;
+    const u = Math.max(8, Math.min(20, Math.floor((innerWidth - 28) / 31)));
+    bd.style.cssText = `width:${31 * u}px;height:${22 * u}px`;
+    bd.innerHTML = P.map((p, i) => `<div class="mt" data-i="${i}" style="left:${p.x * u - p.z * .4 * u + 4}px;top:${p.y * 1.3 * u - p.z * .4 * u + 4}px;width:${2 * u}px;height:${2.6 * u}px;z-index:${p.z};font-size:${u * 1.05}px">${faceHTML(FACES[fc[i]])}</div>`).join('');
+    els = [...bd.children]; mark(); $('#mdf').textContent = dif(L); $('#mmsg').textContent = '';
+  }
+  function shuffle() {
+    const idx = [...alive], nf = mjDeal(idx.map(i => P[i]));
+    idx.forEach((i, k) => fc[i] = nf[k]);
+    els.forEach((e, i) => { if (alive.has(i)) e.innerHTML = faceHTML(FACES[fc[i]]); e.classList.remove('sl'); }); sel = -1; mark();
+  }
+  bd.onclick = e => {
+    const t = e.target.closest('.mt'); if (!t || busy) return; const i = +t.dataset.i;
+    if (!alive.has(i) || !free(i)) return;
+    if (sel == i) { els[i].classList.remove('sl'); sel = -1; return; }
+    if (sel >= 0 && fc[sel] == fc[i]) {
+      [sel, i].forEach(k => { alive.delete(k); els[k].style.display = 'none'; }); sel = -1;
+      score += 10; $('#msc2').textContent = score; mark();
+      if (!alive.size) { busy = 1; score += 100; $('#msc2').textContent = score; $('#mmsg').textContent = 'Gagné !'; winXP(); lvUp('mj'); setTimeout(lvl, 1600); }
+      else if (!pairs()) { toast('Plus de coups : on mélange !'); shuffle(); }
+      return;
+    }
+    if (sel >= 0) els[sel].classList.remove('sl');
+    sel = i; els[i].classList.add('sl');
+  };
+  $('#mhi').onclick = () => { const m = pairs(); if (!m) return; [m[0], m[1]].forEach(k => { els[k].classList.add('hn'); setTimeout(() => els[k].classList.remove('hn'), 1300); }); };
+  $('#msh').onclick = () => { if (!busy) shuffle(); };
+  lvl();
+}
+
+/* ---------- SOLITAIRE ---------- */
+function initSolo() {
+  const el = $('#solo');
+  el.innerHTML = '<div class="box wide"><div class="gtop"><span>Points <b id="osc">0</b></span><span class="skin"><button id="onew">Nouvelle partie</button></span></div><div id="ob" class="ob"></div><div class="msg" id="omsg"></div></div>';
+  const ob = $('#ob'), SU = ['♠', '♥', '♦', '♣'], RK = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  let S, W, F, T, sel, score, won;
+  const red = s => s == 1 || s == 2;
+  const pile = p => p == 's' ? S : p == 'w' ? W : p[0] == 'f' ? F[+p[1]] : T[+p[1]];
+  const deal = () => {
+    const d = []; for (let s = 0; s < 4; s++) for (let r = 0; r < 13; r++) d.push({ s, r, up: 0 });
+    d.sort(() => Math.random() - .5); T = [];
+    for (let j = 0; j < 7; j++) { T.push(d.splice(0, j + 1)); T[j][j].up = 1; }
+    S = d; W = []; F = [[], [], [], []]; sel = null; score = 0; won = 0; $('#omsg').textContent = '';
+  };
+  const move = (s, p) => {
+    const from = pile(s.p), c = from[s.i], to = pile(p), t = to[to.length - 1];
+    if (p[0] == 'f') { if (from.length - 1 != s.i || !(t ? t.s == c.s && c.r == t.r + 1 : c.r == 0)) return 0; to.push(from.pop()); score += 10; }
+    else if (p[0] == 't') { if (!(t ? t.up && red(t.s) != red(c.s) && c.r == t.r - 1 : c.r == 12)) return 0; to.push(...from.splice(s.i)); if (s.p == 'w') score += 5; }
+    else return 0;
+    if (s.p[0] == 't' && from.length && !from[from.length - 1].up) { from[from.length - 1].up = 1; score += 5; }
+    return 1;
+  };
+  const render = () => {
+    const cw = (ob.clientWidth - 20 - 36) / 7, ch = cw * 1.4;
+    const card = (c, p, i, top) => `<div class="cd${c.up ? (red(c.s) ? ' rd' : '') : ' dn'}${sel && sel.p == p && i >= sel.i ? ' sl' : ''}" data-p="${p}" data-i="${i}" style="top:${top}px;width:${cw}px;height:${ch}px">${c.up ? `<b>${RK[c.r]}${SU[c.s]}</b><u>${SU[c.s]}</u>` : ''}</div>`;
+    const pl = (p, h, inner) => `<div class="pl" data-p="${p}" style="height:${h}px">${inner}</div>`;
+    let h = pl('s', ch, S.length ? card({ up: 0 }, 's', S.length - 1, 0) : '');
+    h += pl('w', ch, W.length ? card(W[W.length - 1], 'w', W.length - 1, 0) : '') + '<div></div>';
+    for (let k = 0; k < 4; k++) h += pl('f' + k, ch, F[k].length ? card(F[k][F[k].length - 1], 'f' + k, F[k].length - 1, 0) : '');
+    for (let j = 0; j < 7; j++) {
+      let top = 0; const inner = T[j].map((c, i) => { const s = card(c, 't' + j, i, top); top += c.up ? ch * .3 : ch * .13; return s; }).join('');
+      h += pl('t' + j, Math.max(ch, top + ch * .7), inner);
+    }
+    ob.innerHTML = h; $('#osc').textContent = score;
+    if (!won && F.every(f => f.length == 13)) { won = 1; score += 200; $('#osc').textContent = score; $('#omsg').textContent = 'Gagné !'; winXP(); }
+  };
+  ob.onclick = e => {
+    const t = e.target.closest('[data-p]'); if (!t) return; const p = t.dataset.p, i = t.dataset.i === undefined ? -1 : +t.dataset.i;
+    if (p == 's') { if (S.length) { const c = S.pop(); c.up = 1; W.push(c); } else { S = W.reverse(); S.forEach(c => c.up = 0); W = []; } sel = null; return render(); }
+    if (sel && p != sel.p && move(sel, p)) { sel = null; return render(); }
+    const pl = pile(p), c = pl[i];
+    if (c && !c.up && p[0] == 't' && i == pl.length - 1) { c.up = 1; score += 5; sel = null; }
+    else if (c && c.up && (p[0] == 't' || i == pl.length - 1)) sel = (sel && sel.p == p && sel.i == i) ? null : { p, i };
+    else sel = null;
+    render();
+  };
+  ob.ondblclick = e => {
+    const t = e.target.closest('.cd'); if (!t) return; const p = t.dataset.p; if (p == 's' || p[0] == 'f') return;
+    const pl = pile(p); if (+t.dataset.i != pl.length - 1) return;
+    for (let k = 0; k < 4; k++) if (move({ p, i: pl.length - 1 }, 'f' + k)) { sel = null; render(); return; }
+  };
+  $('#onew').onclick = () => { deal(); render(); };
+  deal(); render();
+}
+
 /* ---------- MENU ---------- */
-const games = { mines: initMines, tower: initTower, chicken: initChicken, merge: initMerge, words: initWords, blast: initBlast };
+const games = { mines: initMines, tower: initTower, chicken: initChicken, merge: initMerge, words: initWords, blast: initBlast, mj: initMj, water: initWater, knife: initKnife, solo: initSolo };
 document.querySelectorAll('.card').forEach(c => c.onclick = () => {
-  if (!auth.currentUser) { alert('Connecte-toi pour jouer.'); setPage('wallet'); return; }
   show('#' + c.dataset.g); games[c.dataset.g]();
 });
 $('#home').onclick = () => show('#menu');
-setBal(bal);
+setBal(bal); xpShow();
 show('#menu');
-
-/* ---------- COMPTE, DEPOTS ET RETRAITS MANUELS ---------- */
-const accountHTML = `
-<section id="wallet" class="scr hidden"><div class="box walletbox">
-  <h2>Mon compte</h2><p id="authState">Connecte-toi pour sauvegarder tes crédits.</p>
-  <button id="loginBtn" class="googleBtn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.7c3.9-3.6 6-8.8 6-15Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.7-5.1c-1.8 1.2-4 2-6.8 2-5.2 0-9.6-3.5-11.2-8.2H5.9v5.2A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.8 27.8a12 12 0 0 1 0-7.6V15H5.9a20 20 0 0 0 0 18Z"/><path fill="#EA4335" d="M24 12.1c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 15l6.9 5.2c1.6-4.7 6-8.1 11.2-8.1Z"/></svg> Continuer avec Google</button><button id="logoutBtn" class="hidden">Déconnexion</button>
-  <div class="walletgrid"><div><h3>Déposer</h3><label>Montant du dépôt<select id="depAmount"><option value="5">5 € — 1M pièces</option><option value="10">10 € — 2,67M pièces</option></select></label><button id="depositBtn" class="paypalBtn"><svg viewBox="0 0 40 40" aria-hidden="true"><path fill="#003087" d="M12 5h13c8 0 11 4 9 11-1.5 7-6 10-13 10h-5l-2 9H5L12 5Z"/><path fill="#009cde" d="M9 8h13c8 0 11 4 9 11-1 5-4 8-9 9l1-5c5-1 7-4 7-8 0-4-3-6-8-6H12l-5 24H2L9 8Z"/></svg> Déposer avec PayPal</button><p class="hint">Le paiement est vérifié manuellement par l’administrateur dans le dashboard. Aucun paiement n’est vérifié automatiquement.</p></div>
-  <div><h3>Retirer</h3><label>Nombre de pièces<input id="withCoins" type="number" min="100000" step="10000" value="100000" max="0"></label><label>Prénom<input id="withFirst" maxlength="60"></label><label>Nom<input id="withLast" maxlength="60"></label><label>Email PayPal<input id="withPaypal" type="email" maxlength="160"></label><p id="withValue">Montant à recevoir : 0,30 €</p><button id="withdrawBtn">DEMANDER UN RETRAIT</button><p class="hint">Taux : 100 000 pièces = 0,30 €. Les pièces sont réservées dès la demande.</p></div></div>
-  <h3>Mes notifications</h3><div id="myNotifs" class="noticeList">Aucune notification.</div><h3>Mes demandes</h3><div id="myRequests" class="noticeList"></div>
-
-</div></section>
-<section id="admin" class="scr hidden"><div class="box walletbox"><h2>Dashboard administrateur</h2><p>Les paiements sont contrôlés manuellement. Aucun contrôle PayPal automatique.</p><h3>Notifications — dépôts à traiter</h3><div id="adminDeposits" class="noticeList"></div><h3>Notifications — retraits à traiter</h3><div id="adminWithdrawals" class="noticeList"></div></div></section>`;
-document.querySelector('main').insertAdjacentHTML('beforeend', accountHTML);
-const style = document.createElement('style'); style.textContent = `
-.betbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;margin-bottom:12px;background:#172554;border:1px solid #475569;border-radius:14px;color:white}.betbar label{display:flex;align-items:center;gap:8px}.betbar input{width:100px;padding:9px;border-radius:8px;border:1px solid #64748b;background:#0f172a;color:white}.betbar button{background:linear-gradient(#34d399,#059669)}
-#wallet,#admin{min-height:calc(100vh - 60px);background:radial-gradient(ellipse at 15% 0%,#283c68 0%,transparent 48%),linear-gradient(145deg,#080d19,#111b31 55%,#172b4d);padding:22px;color:#f8fafc}.walletbox{max-width:960px;margin:18px auto;padding:30px;background:rgba(255,255,255,.075);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.16);border-radius:28px;box-shadow:0 28px 80px #0008}.walletbox h2{font-size:28px;margin:12px 0}.walletbox h3{margin:18px 0 8px;color:#fde68a}.walletgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:18px 0}.walletgrid>div{background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(12,25,48,.66));backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.16);padding:24px;border-radius:22px;display:grid;gap:12px;box-shadow:inset 0 1px rgba(255,255,255,.12),0 16px 36px #0003}.walletbox label{display:grid;gap:5px;margin:8px 0}.walletbox input,.walletbox select{width:100%;min-height:42px}.walletbox button{margin:5px 5px 5px 0;min-height:48px;border-radius:13px;background:linear-gradient(135deg,#2563eb,#4f46e5);box-shadow:0 5px 0 #1e3a8a;color:white}.walletnav{background:linear-gradient(135deg,#2563eb,#4f46e5)!important}.walletbox input,.walletbox select{box-sizing:border-box;background:#0f172a;color:#fff;border:1px solid #475569;border-radius:10px;padding:10px}.walletbox h2{font-size:32px}.walletbox h3{font-size:19px}.hint{font-size:13px;opacity:.8;line-height:1.4}.noticeList{display:grid;gap:9px}.notice{background:rgba(255,255,255,.09);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:15px;display:grid;gap:7px;box-shadow:0 10px 30px #0002}.notice small{opacity:.75}.notice button{margin-right:6px}.okbtn{background:#15803d}.badbtn{background:#991b1b}.walletnav{background:linear-gradient(135deg,#4f46e5,#2563eb)!important}.googleBtn,.paypalBtn{display:flex;align-items:center;justify-content:center;gap:12px;font-weight:800;letter-spacing:.2px}.googleBtn{background:#fff!important;color:#202124!important;box-shadow:0 7px 22px #0003!important}.googleBtn svg{width:24px;height:24px;flex:none}.paypalBtn{background:linear-gradient(110deg,#003087,#0070e0)!important}.paypalBtn svg{width:28px;height:28px;flex:none}.walletbox button{transition:transform .18s,filter .18s}.walletbox button:hover{transform:translateY(-2px);filter:brightness(1.1)}#walletNav,#adminNav{border-radius:999px;padding:9px 16px;font-weight:800;letter-spacing:.4px}.glassToast{position:fixed;z-index:9999;top:18px;left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 28px));display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:24px;background:rgba(245,249,255,.78);color:#101828;border:1px solid rgba(255,255,255,.9);box-shadow:0 18px 60px #0005;backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);font-weight:850;animation:toastIn .45s cubic-bezier(.2,.8,.2,1)}.glassToast svg{width:38px;height:38px;flex:none}.glassToast span{line-height:1.25}.glassToast small{display:block;font-size:10px;letter-spacing:1.4px;opacity:.6;margin-bottom:4px}@keyframes toastIn{from{opacity:0;top:-30px;transform:translate(-50%,-15px) scale(.96)}to{opacity:1;top:18px;transform:translate(-50%,0) scale(1)}}
-`; document.head.append(style);
-const nav = document.createElement('button'); nav.id='walletNav'; nav.textContent='COMPTE'; nav.className='walletnav'; document.querySelector('header').insertBefore(nav, document.querySelector('#cr'));
-const adminNav = document.createElement('button'); adminNav.id='adminNav'; adminNav.textContent='DASHBOARD'; adminNav.className='hidden'; document.querySelector('header').insertBefore(adminNav, document.querySelector('#cr'));
-const el=id=>document.getElementById(id); const euro=n=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
-let unsubNotifs=null, unsubDeps=null, unsubWith=null, unsubMine=null, unsubWallet=null; let seenNotificationIds=new Set();
-function note(text){const n=document.createElement('div');n.className='notice';n.textContent=text;el('myNotifs').prepend(n);}
-function setPage(id){stop();stop=()=>{};document.querySelectorAll('.scr').forEach(s=>s.classList.add('hidden'));el(id).classList.remove('hidden');}
-nav.onclick=()=>setPage('wallet'); adminNav.onclick=()=>setPage('admin');
-el('loginBtn').onclick=async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider());}catch(e){alert('Connexion impossible : '+e.message);}};
-el('logoutBtn').onclick=()=>signOut(auth);
-el('withCoins').oninput=()=>{el('withCoins').max=Math.max(0,bal-1);el('withValue').textContent='Montant à recevoir : '+euro((Math.max(0,Number(el('withCoins').value)||0)/100000)*0.30);};
-el('depositBtn').onclick=async()=>{
- const u=auth.currentUser;if(!u)return alert('Connecte-toi d’abord.');
- const amount=Number(el('depAmount').value), credits=amount===5?1000000:amount===10?2670000:0;
- try{await addDoc(collection(db,'depositRequests'),{uid:u.uid,email:u.email||'',displayName:u.displayName||'',amountEuros:amount,credits,status:'pending',createdAt:serverTimestamp()});
- await notify(u.uid,`Demande de dépôt envoyée : ${amount} € pour ${fmt(credits)} pièces. En attente de vérification.`); window.open(PAYPAL_URL+amount,'_blank','noopener');alert('Demande enregistrée. Termine le paiement PayPal, puis attends la validation manuelle.');}catch(e){alert('Erreur : '+e.message);}
-};
-el('withdrawBtn').onclick=async()=>{
- const u=auth.currentUser;if(!u)return alert('Connecte-toi d’abord.');
- const coins=Math.floor(Number(el('withCoins').value)), first=el('withFirst').value.trim(), last=el('withLast').value.trim(), paypal=el('withPaypal').value.trim();
- if(coins<100000||!first||!last||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypal))return alert('Formulaire incomplet. Minimum : 100 000 pièces.');
- const amount=Number((coins/100000*0.30).toFixed(2)), requestRef=doc(collection(db,'withdrawalRequests'));
- try{await runTransaction(db,async tx=>{const ref=doc(db,'users',u.uid),snap=await tx.get(ref);const current=snap.exists()?Math.max(1,Math.floor(snap.data().credits||1)):1;if(coins>current-1)throw new Error('Tu dois garder au moins 1 pièce. Disponible pour retrait : '+fmt(Math.max(0,current-1)));tx.set(ref,{uid:u.uid,credits:current-coins,updatedAt:serverTimestamp()},{merge:true});tx.set(requestRef,{uid:u.uid,email:u.email||'',displayName:u.displayName||'',firstName:first,lastName:last,paypalEmail:paypal,credits:coins,amountEuros:amount,status:'pending',createdAt:serverTimestamp()});});
- await notify(u.uid,`Demande de retrait de ${fmt(coins)} pièces (${euro(amount)}) envoyée. Tes pièces ont été retirées du solde.`);alert('Demande envoyée. Les pièces ont été déduites une seule fois.');}catch(e){alert('Retrait impossible : '+e.message);}
-};
-function listenUser(u){
- if(unsubNotifs)unsubNotifs();
- if(unsubMine)unsubMine();
- unsubNotifs=onSnapshot(query(collection(db,'notifications'),where('uid','==',u.uid),orderBy('createdAt','desc')),(snap)=>{
-   el('myNotifs').innerHTML='';
-   if(snap.empty)el('myNotifs').textContent='Aucune notification.';
-   snap.forEach(d=>{const v=d.data(),n=document.createElement('div');n.className='notice';n.textContent=v.message||'Notification';el('myNotifs').append(n);if(!seenNotificationIds.has(d.id)){seenNotificationIds.add(d.id);if(v.kind==='deposit'||v.kind==='withdrawal')showGlassToast(v.message,v.kind==='withdrawal');}});
- });
- const render=()=>{};
- const depQ=query(collection(db,'depositRequests'),where('uid','==',u.uid));
- const withQ=query(collection(db,'withdrawalRequests'),where('uid','==',u.uid));
- let dep=[],wit=[];
- const draw=()=>{const items=[...dep.map(data=>({kind:'Dépôt',data})),...wit.map(data=>({kind:'Retrait',data}))];items.sort((a,b)=>(b.data.createdAt?.seconds||0)-(a.data.createdAt?.seconds||0));el('myRequests').innerHTML='';items.forEach(v=>{const n=document.createElement('div');n.className='notice';n.textContent=v.kind+' — '+(v.data.status||'en attente')+' — '+fmt(v.data.credits||0)+' pièces';el('myRequests').append(n);});};
- const a=onSnapshot(depQ,s=>{dep=s.docs.map(d=>d.data());draw();});
- const b=onSnapshot(withQ,s=>{wit=s.docs.map(d=>d.data());draw();});
- unsubMine=()=>{a();b();};
-}
-
-function showGlassToast(message,isPaypal){const old=document.querySelector('.glassToast');if(old)old.remove();const t=document.createElement('div');t.className='glassToast';const logo=isPaypal?'<svg viewBox="0 0 40 40" aria-hidden="true"><path fill="#003087" d="M12 5h13c8 0 11 4 9 11-1.5 7-6 10-13 10h-5l-2 9H5L12 5Z"/><path fill="#009cde" d="M9 8h13c8 0 11 4 9 11-1 5-4 8-9 9l1-5c5-1 7-4 7-8 0-4-3-6-8-6H12l-5 24H2L9 8Z"/></svg>':'<span style="font-size:30px">🎉</span>';t.innerHTML=logo+'<span><small>PEXI PLAY · NOTIFICATION</small></span>';t.querySelector('span').append(document.createTextNode(message));document.body.append(t);setTimeout(()=>t.remove(),6500);}
-async function notify(uid,message,extra={}){await addDoc(collection(db,'notifications'),{uid,message,...extra,createdAt:serverTimestamp(),read:false});}
-function listenAdmin(){
- if(unsubDeps)unsubDeps();if(unsubWith)unsubWith();
- unsubDeps=onSnapshot(query(collection(db,'depositRequests'),where('status','==','pending')),(snap)=>{el('adminDeposits').innerHTML='';if(snap.empty)el('adminDeposits').textContent='Aucun dépôt en attente.';snap.forEach(d=>{const v=d.data(),n=document.createElement('div');n.className='notice';const p=document.createElement('p');p.textContent=`${v.displayName||'Joueur'} — ${v.email||''} — ${v.amountEuros} € — ${fmt(v.credits)} pièces`;n.append(p);const info=document.createElement('small');info.textContent='Dépôt à vérifier manuellement dans PayPal';n.append(info);const yes=document.createElement('button');yes.className='okbtn';yes.textContent='PAIEMENT REÇU : DONNER';yes.onclick=async()=>{yes.disabled=true;try{await runTransaction(db,async tx=>{const req=await tx.get(d.ref);if(!req.exists()||req.data().status!=='pending')throw new Error('Demande déjà traitée');const ur=doc(db,'users',v.uid),us=await tx.get(ur);if(!us.exists())tx.set(ur,{uid:v.uid,credits:1+v.credits,updatedAt:serverTimestamp()},{merge:true});else tx.update(ur,{credits:Math.max(1,Math.floor(us.data().credits||1))+v.credits,updatedAt:serverTimestamp()});tx.update(d.ref,{status:'approved',processedAt:serverTimestamp()});});await notify(v.uid,`Tu as déposé ${fmt(v.credits)} pièces !!!!!`,{kind:'deposit',amount:fmt(v.credits)});}catch(e){alert(e.message);yes.disabled=false;}};const no=document.createElement('button');no.className='badbtn';no.textContent='PAIEMENT PAS REÇU : SUPPRIMER';no.onclick=async()=>{if(confirm('Supprimer cette demande de dépôt ?'))await deleteDoc(d.ref);};n.append(yes,no);el('adminDeposits').append(n);});});
- unsubWith=onSnapshot(query(collection(db,'withdrawalRequests'),where('status','==','pending')),(snap)=>{el('adminWithdrawals').innerHTML='';if(snap.empty)el('adminWithdrawals').textContent='Aucun retrait en attente.';snap.forEach(d=>{const v=d.data(),n=document.createElement('div');n.className='notice';const p=document.createElement('p');p.textContent=`${v.firstName||''} ${v.lastName||''} — ${fmt(v.credits)} pièces — ${euro(v.amountEuros)}`;n.append(p);const mail=document.createElement('small');mail.textContent='Email PayPal : '+(v.paypalEmail||'');n.append(mail);const yes=document.createElement('button');yes.className='okbtn';yes.textContent="J'AI DONNÉ";yes.onclick=async()=>{yes.disabled=true;try{await updateDoc(d.ref,{status:'paid',processedAt:serverTimestamp()});await notify(v.uid,`Bien joué, tu as retiré ${euro(v.amountEuros)} !!!`,{kind:'withdrawal',amount:euro(v.amountEuros)});}catch(e){alert(e.message);yes.disabled=false;}};n.append(yes);el('adminWithdrawals').append(n);});});
-}
-onAuthStateChanged(auth,async u=>{
- window.PEXI.user=u||null;
- if(!u){if(unsubWallet)unsubWallet();bal=1;$('#bal').textContent='1';try{localStorage.setItem('mj_bal','1')}catch(e){}el('authState').textContent='Non connecté';el('loginBtn').classList.remove('hidden');el('logoutBtn').classList.add('hidden');adminNav.classList.add('hidden');if(unsubNotifs)unsubNotifs();if(unsubMine)unsubMine();return;}
- el('authState').textContent='Connecté : '+(u.displayName||u.email);el('loginBtn').classList.add('hidden');el('logoutBtn').classList.remove('hidden');
- const ref=doc(db,'users',u.uid);let snap=await getDoc(ref);if(!snap.exists())await setDoc(ref,{uid:u.uid,email:u.email||'',displayName:u.displayName||'',credits:1,createdAt:serverTimestamp()});else if(typeof snap.data().credits==='number'&&snap.data().credits<1)await updateDoc(ref,{credits:1});
- if(unsubWallet)unsubWallet();unsubWallet=onSnapshot(ref,ds=>{if(ds.exists()){bal=Math.max(1,Math.floor(ds.data().credits||1));$('#bal').textContent=fmt(bal);try{localStorage.setItem('mj_bal',bal)}catch(e){}el('withCoins').max=Math.max(0,bal-1);}});
- listenUser(u);if(u.email===ADMIN_EMAIL){adminNav.classList.remove('hidden');listenAdmin();}else adminNav.classList.add('hidden');
-});
