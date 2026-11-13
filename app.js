@@ -772,8 +772,275 @@ function initSolo() {
   deal(); render();
 }
 
+/* ---------- HEXA SORT ---------- */
+function initHexa() {
+  const el = $('#hexa');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="hxs">0</b></span><b id="hxd"></b><span id="hxg"></span></div><svg id="hxv" viewBox="-170 -175 340 395" style="width:100%;border-radius:16px;background:#0003;touch-action:manipulation"></svg><div class="msg" id="hxm">Choisis une pile en bas, puis une case. 10 pareilles = gagné !</div></div>';
+  const v = $('#hxv'), S = 34, C = ['#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316'];
+  const P = [0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 180 * (60 * i - 30); return (S * .94 * Math.cos(a)).toFixed(1) + ',' + (S * .94 * Math.sin(a)).toFixed(1); }).join(' ');
+  let cells, tray, sel, score = 0, goal, nc, over, L;
+  const run = c => { let n = 0; const s = c.s, t = s[s.length - 1]; for (let i = s.length - 1; i >= 0 && s[i] == t; i--) n++; return n; };
+  const nb = a => cells.filter(b => b != a && Math.abs(b.q - a.q) + Math.abs(b.r - a.r) + Math.abs(b.q + b.r - a.q - a.r) == 2);
+  const piece = () => { const s = []; for (let k = 1 + Math.random() * 2 | 0; k > 0; k--) { const c = Math.random() * nc | 0; for (let n = 2 + Math.random() * 2 | 0; n > 0; n--) s.push(c); } return s; };
+  const tiles = (s, x, y) => s.map((c, k) => `<polygon points="${P}" transform="translate(${x},${y - k * 6})" fill="${C[c]}" stroke="#0007" stroke-width="1.5"/>`).join('');
+  const draw = () => {
+    v.innerHTML = cells.map((c, i) => { const x = S * 1.732 * (c.q + c.r / 2), y = S * 1.5 * c.r; return `<g data-c="${i}"><polygon points="${P}" transform="translate(${x},${y})" fill="rgba(255,255,255,.12)" stroke="#fff4"/>${tiles(c.s, x, y)}</g>`; }).join('') +
+      tray.map((s, i) => s ? `<g data-t="${i}"><polygon points="${P}" transform="translate(${(i - 1) * 100},175)" fill="${i == sel ? '#fff5' : '#0000'}" stroke="${i == sel ? '#fde047' : 'none'}" stroke-width="3"/>${tiles(s, (i - 1) * 100, 175)}</g>` : '').join('');
+    $('#hxs').textContent = score; $('#hxg').textContent = 'Objectif : ' + goal;
+  };
+  const resolve = () => {
+    let ch = 1;
+    while (ch) {
+      ch = 0;
+      loop: for (const a of cells) {
+        if (!a.s.length) continue; const k = a.s[a.s.length - 1];
+        for (const b of nb(a)) {
+          if (b.s[b.s.length - 1] !== k) continue;
+          const [f, t] = run(a) <= run(b) ? [a, b] : [b, a];
+          for (let n = run(f); n > 0; n--) t.s.push(f.s.pop());
+          ch = 1; break loop;
+        }
+      }
+      if (ch) continue;
+      for (const a of cells) if (a.s.length && run(a) >= 10) { for (let n = 0; n < 10; n++) a.s.pop(); score += 100; goal--; ch = 1; }
+    }
+  };
+  const start = () => {
+    L = lvGet('hexa'); nc = Math.min(3 + (L / 3 | 0), 6); goal = 2 + (L / 2 | 0); cells = [];
+    for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.abs(q + r) <= 2) cells.push({ q, r, s: [] });
+    tray = [piece(), piece(), piece()]; sel = -1; over = 0; $('#hxd').textContent = dif(L); draw();
+  };
+  v.onclick = e => {
+    if (over == 1) { score = 0; return start(); } if (over) return;
+    const t = e.target.closest('[data-t],[data-c]'); if (!t) return;
+    if (t.dataset.t !== undefined) { sel = +t.dataset.t; return draw(); }
+    const c = cells[+t.dataset.c]; if (sel < 0 || c.s.length) return;
+    c.s = tray[sel].slice(); tray[sel] = null; sel = -1; if (tray.every(x => !x)) tray = [piece(), piece(), piece()];
+    resolve(); draw();
+    if (goal <= 0) { over = 2; $('#hxm').textContent = 'Gagné !'; winXP(); lvUp('hexa'); setTimeout(start, 1500); }
+    else if (cells.every(x => x.s.length)) { over = 1; $('#hxm').textContent = 'Plateau plein ! Touche pour rejouer'; }
+  };
+  start();
+}
+
+/* ---------- SCREW JAM ---------- */
+function initScrew() {
+  const el = $('#screw');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="swp">0</b></span><b id="swd"></b></div><div id="swb"></div><div id="swt" class="mtr" style="width:300px"></div><div class="msg" id="swm"></div></div>';
+  const b = $('#swb'), t = $('#swt'), SC = ['#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316', '#ec4899'];
+  let P, buf, score = 0, over, L;
+  const blk = (s, p) => P.some(q => q.z > p.z && q.sc.some(x => x.on) && s.x > q.x && s.x < q.x + 120 && s.y > q.y && s.y < q.y + 26);
+  const draw = () => {
+    b.style.cssText = 'position:relative;width:300px;height:340px;margin:auto;background:#0003;border-radius:14px';
+    b.innerHTML = P.filter(p => p.sc.some(x => x.on)).map(p => `<div class="pt" style="left:${p.x}px;top:${p.y}px;z-index:${p.z + 1}">${p.sc.map((s, j) => s.on ? `<i class="sw${blk(s, p) ? ' lk' : ''}" data-p="${p.z}" data-s="${j}" style="left:${s.x - p.x - 10}px;--c:${SC[s.c]}"></i>` : '').join('')}</div>`).join('');
+    t.innerHTML = Array.from({ length: 5 }, (_, i) => `<div class="ms" style="height:44px">${buf[i] !== undefined ? `<i class="sw2" style="--c:${SC[buf[i]]}"></i>` : ''}</div>`).join('');
+  };
+  const lvl = () => {
+    L = lvGet('screw'); const np = 3 * (1 + Math.min(L / 2 | 0, 3)), nc = Math.min(3 + (L / 3 | 0), 7), cols = [];
+    for (let i = 0; i < np * 2 / 3; i++) cols.push(i % nc, i % nc, i % nc);
+    cols.sort(() => Math.random() - .5);
+    P = Array.from({ length: np }, (_, z) => { const x = Math.random() * 180 | 0, y = Math.random() * 314 | 0; return { z, x, y, sc: [{ c: cols[z * 2], x: x + 14, y: y + 13, on: 1 }, { c: cols[z * 2 + 1], x: x + 106, y: y + 13, on: 1 }] }; });
+    buf = []; over = 0; $('#swd').textContent = dif(L); $('#swm').textContent = ''; draw();
+  };
+  b.onclick = e => {
+    const s = e.target.closest('.sw'); if (!s || over) return;
+    const p = P[+s.dataset.p], x = p.sc[+s.dataset.s]; if (!x.on || blk(x, p)) return;
+    x.on = 0; const i = buf.lastIndexOf(x.c); buf.splice(i < 0 ? buf.length : i + 1, 0, x.c);
+    if (buf.filter(c => c == x.c).length == 3) { buf = buf.filter(c => c != x.c); score += 30; $('#swp').textContent = score; }
+    draw();
+    if (P.every(p => p.sc.every(s => !s.on)) && !buf.length) { over = 1; $('#swm').textContent = 'Gagné !'; winXP(); lvUp('screw'); setTimeout(lvl, 1500); }
+    else if (buf.length >= 5) { over = 2; $('#swm').textContent = 'Barre pleine ! Touche ici pour rejouer'; }
+  };
+  $('#swm').onclick = () => { if (over == 2) lvl(); };
+  lvl();
+}
+
+/* ---------- CANDY CRUSH ---------- */
+function initCandy() {
+  const el = $('#candy');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Score <b id="cys">0</b>/<span id="cyt"></span></span><b id="cyd"></b><span>Coups <b id="cym">0</b></span></div><div id="cyg" class="cg"></div><div class="msg" id="cyx"></div></div>';
+  const N = 8, E = ['🍬', '🍭', '🍩', '🍒', '🍋', '🍇'], g = $('#cyg'), msg = t => $('#cyx').textContent = t;
+  let B, sel = -1, sc, mv, tg, busy, over, L, nc;
+  const draw = (k = new Set()) => { g.innerHTML = B.map((v, i) => `<div class="cn${i == sel ? ' sl' : ''}${k.has(i) ? ' x' : ''}" data-i="${i}">${v < 0 ? '' : E[v]}</div>`).join(''); $('#cys').textContent = sc; $('#cym').textContent = mv; };
+  const find = () => {
+    const k = new Set();
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const i = y * N + x, v = B[i]; if (v < 0) continue;
+      if (x < N - 2 && B[i + 1] == v && B[i + 2] == v) k.add(i).add(i + 1).add(i + 2);
+      if (y < N - 2 && B[i + N] == v && B[i + 2 * N] == v) k.add(i).add(i + N).add(i + 2 * N);
+    }
+    return k;
+  };
+  const fall = () => { for (let x = 0; x < N; x++) { const col = []; for (let y = N - 1; y >= 0; y--) if (B[y * N + x] >= 0) col.push(B[y * N + x]); for (let y = N - 1; y >= 0; y--) B[y * N + x] = col.length ? col.shift() : Math.random() * nc | 0; } };
+  const cas = (m = 1) => {
+    const k = find();
+    if (!k.size) {
+      busy = 0;
+      if (sc >= tg) { over = 1; msg('Gagné !'); winXP(); lvUp('candy'); setTimeout(lvl, 1500); }
+      else if (mv <= 0) { over = 2; msg('Plus de coups ! Touche pour rejouer'); }
+      return;
+    }
+    sc += k.size * 10 * m; draw(k);
+    setTimeout(() => { k.forEach(i => B[i] = -1); fall(); draw(); setTimeout(() => cas(m + 1), 280); }, 260);
+  };
+  function lvl() {
+    L = lvGet('candy'); nc = Math.min(5 + (L / 5 | 0), 6); tg = 600 + L * 300; mv = Math.max(12, 22 - (L / 2 | 0)); sc = 0; sel = -1; busy = 0; over = 0;
+    B = Array.from({ length: 64 }, () => Math.random() * nc | 0);
+    for (let t = 0; t < 99 && find().size; t++) find().forEach(i => B[i] = Math.random() * nc | 0);
+    $('#cyt').textContent = tg; $('#cyd').textContent = dif(L); msg(''); draw();
+  }
+  g.onclick = e => {
+    if (over == 2) return lvl();
+    const c = e.target.closest('.cn'); if (!c || busy || over) return; const i = +c.dataset.i;
+    if (sel < 0 || sel == i) { sel = sel == i ? -1 : i; return draw(); }
+    const d = Math.abs(i % N - sel % N) + Math.abs((i / N | 0) - (sel / N | 0));
+    if (d != 1) { sel = i; return draw(); }
+    const a = sel; sel = -1; [B[a], B[i]] = [B[i], B[a]];
+    if (find().size) { mv--; busy = 1; draw(); setTimeout(cas, 150); } else { [B[a], B[i]] = [B[i], B[a]]; draw(); }
+  };
+  lvl();
+}
+
+/* ---------- SUBWAY SURFERS ---------- */
+function initSubway() {
+  const el = $('#subway');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Distance <b id="sbd">0</b> m</span><span>🪙 <b id="sbc">0</b></span></div><canvas id="sbv" width="360" height="560"></canvas><div class="msg" id="sbm">Glisse ← → pour changer de voie, ↑ saute, ↓ glisse</div></div>';
+  const cv = $('#sbv'), c = cv.getContext('2d'), H0 = 130, H1 = 530;
+  let lane, px, jy, vy, roll, obs, v, cnt, dist, coins, over, raf, sx;
+  const sc = d => .2 + .8 * d * d, Y = d => H0 + (H1 - H0) * d * d, X = (l, d) => 180 + (l - 1) * 110 * sc(d);
+  const reset = () => { lane = 1; px = 1; jy = 0; vy = 0; roll = 0; obs = []; v = .012; cnt = 99; dist = 0; coins = 0; over = 0; sx = null; $('#sbm').textContent = ''; };
+  const act = a => {
+    if (over) return;
+    if (a == 'l') lane = Math.max(0, lane - 1); if (a == 'r') lane = Math.min(2, lane + 1);
+    if (a == 'u' && jy == 0) vy = 11; if (a == 'd') { roll = 30; if (jy > 0) vy = -14; }
+  };
+  const spawn = () => {
+    const free = Math.random() * 3 | 0;
+    for (let l = 0; l < 3; l++) {
+      if (l == free) { if (Math.random() < .7) obs.push({ l, d: 0, t: 'c' }); continue; }
+      if (Math.random() < .75) { const q = Math.random(); obs.push({ l, d: 0, t: q < .4 ? 'b' : q < .7 ? 'h' : 't' }); }
+    }
+  };
+  const die = () => { over = 1; $('#sbm').textContent = `Perdu ! +${coins} crédits — touche pour rejouer`; setBal(bal + coins); if (dist >= 300) winXP(); };
+  const upd = () => {
+    dist += v * 60; cnt++; if (cnt >= .5 / v) { cnt = 0; spawn(); }
+    v = Math.min(.03, v + .000004); px += (lane - px) * .25;
+    if (jy > 0 || vy > 0) { jy += vy; vy -= .7; if (jy <= 0) { jy = 0; vy = 0; } }
+    if (roll > 0) roll--;
+    for (const o of obs) o.d += v;
+    for (const o of obs) {
+      if (o.d < .88 || o.d > .97 || Math.abs(px - o.l) > .6 || o.g) continue;
+      if (o.t == 'c') { o.g = 1; coins++; } else if (o.t == 'b' && jy < 30 || o.t == 'h' && !roll || o.t == 't') die();
+    }
+    obs = obs.filter(o => o.d < 1.05 && !o.g);
+  };
+  const draw = () => {
+    const g = c.createLinearGradient(0, 0, 0, H0); g.addColorStop(0, '#38bdf8'); g.addColorStop(1, '#bae6fd'); c.fillStyle = g; c.fillRect(0, 0, 360, H0);
+    c.fillStyle = '#365314'; c.fillRect(0, H0, 360, 430);
+    c.fillStyle = '#334155'; c.beginPath(); c.moveTo(180 - 33, H0); c.lineTo(180 + 33, H0); c.lineTo(180 + 175, 560); c.lineTo(180 - 175, 560); c.fill();
+    c.strokeStyle = '#fff6'; c.lineWidth = 2;
+    for (const o of [-55, 55]) { c.beginPath(); c.moveTo(180 + o * .2, H0); c.lineTo(180 + o * 1.06, 560); c.stroke(); }
+    const ph = (dist % 100) / 100;
+    for (let i = 0; i < 8; i++) { const d = (i + ph) / 8, s = sc(d); c.fillStyle = 'rgba(255,255,255,.13)'; c.fillRect(X(1, d) - 165 * s, Y(d), 330 * s, 3 * s); }
+    [...obs].sort((a, b) => a.d - b.d).forEach(o => {
+      const s = sc(o.d), x = X(o.l, o.d), y = Y(o.d);
+      if (o.t == 'c') { c.fillStyle = '#facc15'; c.strokeStyle = '#a16207'; c.lineWidth = 2; c.beginPath(); c.arc(x, y - 30 * s, 12 * s, 0, 7); c.fill(); c.stroke(); }
+      else if (o.t == 'b') { c.fillStyle = '#ef4444'; c.fillRect(x - 40 * s, y - 38 * s, 80 * s, 38 * s); c.fillStyle = '#fff'; c.fillRect(x - 40 * s, y - 24 * s, 80 * s, 8 * s); }
+      else if (o.t == 'h') { c.fillStyle = '#64748b'; c.fillRect(x - 42 * s, y - 95 * s, 8 * s, 95 * s); c.fillRect(x + 34 * s, y - 95 * s, 8 * s, 95 * s); c.fillStyle = '#f59e0b'; c.fillRect(x - 42 * s, y - 95 * s, 84 * s, 26 * s); }
+      else { c.fillStyle = '#2563eb'; c.fillRect(x - 42 * s, y - 120 * s, 84 * s, 120 * s); c.fillStyle = '#93c5fd'; c.fillRect(x - 32 * s, y - 100 * s, 64 * s, 34 * s); c.fillStyle = '#facc15'; c.fillRect(x - 36 * s, y - 16 * s, 14 * s, 8 * s); c.fillRect(x + 22 * s, y - 16 * s, 14 * s, 8 * s); }
+    });
+    const s = sc(.92), x = X(px, .92), gy = Y(.92), y = gy - jy * s, h = roll ? 36 : 70;
+    c.fillStyle = '#0004'; c.beginPath(); c.ellipse(x, gy, 20 * s, 6 * s, 0, 0, 7); c.fill();
+    c.fillStyle = '#f97316'; c.fillRect(x - 14 * s, y - h * s, 28 * s, (h - 18) * s);
+    c.fillStyle = '#1e3a8a'; c.fillRect(x - 12 * s, y - 18 * s, 24 * s, 18 * s);
+    c.fillStyle = '#fcd34d'; c.beginPath(); c.arc(x, y - (h + 8) * s, 10 * s, 0, 7); c.fill();
+    c.fillStyle = '#ef4444'; c.fillRect(x - 11 * s, y - (h + 17) * s, 22 * s, 7 * s);
+    if (over) { c.fillStyle = '#000a'; c.fillRect(0, 0, 360, 560); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '800 36px system-ui'; c.fillText('PERDU', 180, 270); c.font = '700 20px system-ui'; c.fillText(Math.round(dist) + ' m — touche pour rejouer', 180, 305); }
+  };
+  const loop = () => { if (!over) upd(); draw(); $('#sbd').textContent = dist | 0; $('#sbc').textContent = coins; raf = requestAnimationFrame(loop); };
+  cv.onpointerdown = e => { if (over) return reset(); sx = [e.clientX, e.clientY]; };
+  cv.onpointerup = e => {
+    if (!sx) return; const dx = e.clientX - sx[0], dy = e.clientY - sx[1]; sx = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+    Math.abs(dx) > Math.abs(dy) ? act(dx > 0 ? 'r' : 'l') : act(dy < 0 ? 'u' : 'd');
+  };
+  const kd = e => { const m = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd' }[e.key]; if (m) { e.preventDefault(); act(m); } };
+  document.addEventListener('keydown', kd);
+  reset(); loop();
+  stop = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', kd); };
+}
+
+/* ---------- BUBBLE SHOOTER ---------- */
+function initBubble() {
+  const el = $('#bubble');
+  el.innerHTML = '<div class="box"><div class="gtop"><span>Points <b id="bus">0</b></span><b id="bud"></b></div><canvas id="bcv" width="360" height="560"></canvas><div class="msg" id="bum"></div></div>';
+  const cv = $('#bcv'), c = cv.getContext('2d'), R = 18, RH = R * 1.732, ROWS = 14, SX = 180, SY = 515;
+  const BC = ['#ef4444', '#3b82f6', '#22c55e', '#facc15', '#a855f7', '#f97316'];
+  let B, cur, nxt, mb, ang = -Math.PI / 2, score = 0, over, L, nc, raf;
+  const cl = r => r % 2 ? 9 : 10, pos = (r, q) => [R + q * 2 * R + (r % 2 ? R : 0), R + r * RH];
+  const nbs = (r, q) => {
+    const [x, y] = pos(r, q), o = [];
+    for (let a = r - 1; a <= r + 1; a++) for (let b = 0; a >= 0 && a < ROWS && b < cl(a); b++) {
+      if (a == r && b == q) continue; const [u, w] = pos(a, b); if (Math.hypot(u - x, w - y) < 2 * R + 3) o.push([a, b]);
+    }
+    return o;
+  };
+  const pick = () => { const s = new Set(); B.flat().forEach(v => v >= 0 && s.add(v)); const a = [...s]; return a.length ? a[Math.random() * a.length | 0] : 0; };
+  function lvl() {
+    L = lvGet('bubble'); nc = Math.min(3 + (L / 3 | 0), 6); B = Array.from({ length: ROWS }, (_, r) => Array(cl(r)).fill(-1));
+    const n = Math.min(4 + (L / 2 | 0), 9); for (let r = 0; r < n; r++) for (let q = 0; q < cl(r); q++) B[r][q] = Math.random() * nc | 0;
+    cur = pick(); nxt = pick(); mb = null; over = 0; $('#bud').textContent = dif(L); $('#bum').textContent = '';
+  }
+  const snap = () => {
+    let best = null, bd = 1e9;
+    for (let r = 0; r < ROWS; r++) for (let q = 0; q < cl(r); q++) { if (B[r][q] >= 0) continue; const [x, y] = pos(r, q), d = Math.hypot(x - mb.x, y - mb.y); if (d < bd) { bd = d; best = [r, q]; } }
+    const [r, q] = best, k = mb.c; B[r][q] = k; mb = null; cur = nxt; nxt = pick();
+    const seen = new Set([r + ',' + q]), st = [[r, q]];
+    while (st.length) { const [a, b] = st.pop(); for (const [u, w] of nbs(a, b)) { const key = u + ',' + w; if (!seen.has(key) && B[u][w] == k) { seen.add(key); st.push([u, w]); } } }
+    if (seen.size >= 3) {
+      seen.forEach(s => { const [a, b] = s.split(','); B[a][b] = -1; }); score += seen.size * 10;
+      const ok = new Set(), s2 = [];
+      for (let b = 0; b < cl(0); b++) if (B[0][b] >= 0) { ok.add('0,' + b); s2.push([0, b]); }
+      while (s2.length) { const [a, b] = s2.pop(); for (const [u, w] of nbs(a, b)) { const key = u + ',' + w; if (!ok.has(key) && B[u][w] >= 0) { ok.add(key); s2.push([u, w]); } } }
+      for (let a = 0; a < ROWS; a++) for (let b = 0; b < cl(a); b++) if (B[a][b] >= 0 && !ok.has(a + ',' + b)) { B[a][b] = -1; score += 20; }
+    }
+    $('#bus').textContent = score;
+    if (!B.flat().some(v => v >= 0)) { over = 1; $('#bum').textContent = 'Gagné !'; winXP(); lvUp('bubble'); setTimeout(lvl, 1500); }
+    else if (B[ROWS - 2].some(v => v >= 0)) { over = 2; $('#bum').textContent = 'Débordement ! Touche pour rejouer'; }
+  };
+  const upd = () => {
+    if (!mb) return;
+    for (let i = 0; i < 2; i++) {
+      mb.x += mb.vx * 6; mb.y += mb.vy * 6;
+      if (mb.x < R) { mb.x = R; mb.vx *= -1; } if (mb.x > 360 - R) { mb.x = 360 - R; mb.vx *= -1; }
+      let hit = mb.y <= R;
+      for (let r = 0; r < ROWS && !hit; r++) for (let q = 0; q < cl(r); q++) if (B[r][q] >= 0) { const [x, y] = pos(r, q); if (Math.hypot(x - mb.x, y - mb.y) < 2 * R - 4) { hit = 1; break; } }
+      if (hit) { snap(); return; }
+    }
+  };
+  const ball = (x, y, k) => {
+    c.beginPath(); c.arc(x, y, R - 1, 0, 7); c.fillStyle = BC[k]; c.fill();
+    const g = c.createRadialGradient(x - 6, y - 6, 1, x, y, R); g.addColorStop(0, 'rgba(255,255,255,.8)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.3)');
+    c.fillStyle = g; c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.5; c.stroke();
+  };
+  const draw = () => {
+    c.fillStyle = '#1e1b4b'; c.fillRect(0, 0, 360, 560);
+    c.setLineDash([8, 6]); c.strokeStyle = '#ef4444aa'; c.lineWidth = 2; const ly = pos(ROWS - 2, 0)[1] - R; c.beginPath(); c.moveTo(0, ly); c.lineTo(360, ly); c.stroke();
+    c.strokeStyle = '#fff5'; c.beginPath(); c.moveTo(SX, SY); c.lineTo(SX + Math.cos(ang) * 150, SY + Math.sin(ang) * 150); c.stroke(); c.setLineDash([]);
+    for (let r = 0; r < ROWS; r++) for (let q = 0; q < cl(r); q++) if (B[r][q] >= 0) { const [x, y] = pos(r, q); ball(x, y, B[r][q]); }
+    if (!mb) ball(SX, SY, cur); else ball(mb.x, mb.y, mb.c);
+    ball(SX + 90, SY + 22, nxt); c.fillStyle = '#fff'; c.font = '700 12px system-ui'; c.textAlign = 'center'; c.fillText('SUIVANT', SX + 90, SY - 6);
+    if (over == 2) { c.fillStyle = '#000a'; c.fillRect(0, 0, 360, 560); c.fillStyle = '#fff'; c.font = '800 34px system-ui'; c.fillText('PERDU', 180, 280); }
+  };
+  const aim = e => { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * 360 / r.width, y = (e.clientY - r.top) * 560 / r.height; ang = Math.max(-Math.PI + .2, Math.min(-.2, Math.atan2(y - SY, x - SX))); };
+  cv.onpointerdown = aim; cv.onpointermove = aim;
+  cv.onpointerup = e => { aim(e); if (over == 2) { score = 0; return lvl(); } if (over || mb) return; mb = { x: SX, y: SY, vx: Math.cos(ang), vy: Math.sin(ang), c: cur }; };
+  const loop = () => { upd(); draw(); raf = requestAnimationFrame(loop); };
+  lvl(); loop(); stop = () => cancelAnimationFrame(raf);
+}
+
 /* ---------- MENU ---------- */
-const games = { mines: initMines, tower: initTower, chicken: initChicken, merge: initMerge, words: initWords, blast: initBlast, mj: initMj, water: initWater, knife: initKnife, solo: initSolo };
+const games = { mines: initMines, tower: initTower, chicken: initChicken, merge: initMerge, words: initWords, blast: initBlast, mj: initMj, water: initWater, knife: initKnife, solo: initSolo, hexa: initHexa, screw: initScrew, candy: initCandy, subway: initSubway, bubble: initBubble };
 document.querySelectorAll('.card').forEach(c => c.onclick = () => {
   show('#' + c.dataset.g); games[c.dataset.g]();
 });
