@@ -228,6 +228,46 @@ header{flex-wrap:wrap}
 .cd b{position:absolute;left:4px;top:2px;font-size:clamp(11px,3.4vw,18px)}
 .cd u{position:absolute;right:5px;bottom:2px;text-decoration:none;font-size:clamp(16px,6vw,32px)}
 .cd.sl{outline:3px solid #fde047;box-shadow:0 0 12px #fde047}
+/* ---- v7 ---- */
+.wb.l{background:radial-gradient(#ef444477,transparent 65%)}
+.wb.l b{color:#f87171;-webkit-text-stroke-color:#450a0a;text-shadow:0 6px 0 #7f1d1d,0 0 30px #ef4444}
+.ch{width:90px;margin-left:-45px}
+.ch.dead svg{transform:scale(1.35,.28);transform-origin:50% 100%;animation:none;filter:none}
+.car{width:50px;margin-left:-25px}
+.car.k{width:52px;margin-left:-26px;top:-210px}
+.car.kill{top:-140px;animation:kill .45s cubic-bezier(.55,0,1,.6) forwards}
+@keyframes kill{to{top:22px}}
+.bar{left:5px;width:110px;top:10px}
+.lamp{animation:lp .6s infinite alternate}
+@keyframes lp{to{opacity:.25}}
+.fth{position:absolute;left:50%;top:110px;width:10px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 3px #0005;z-index:6;animation:fth .8s ease-out forwards}
+@keyframes fth{to{transform:translate(var(--x),var(--y)) rotate(200deg);opacity:0}}
+.wt .tb,.bottle .tb,.vase .tb{width:78px;height:auto;border:0;background:none;border-radius:0;clip-path:none}
+.wv{animation:wv 1.4s linear infinite}
+@keyframes wv{to{transform:translateX(40px)}}
+.mt{position:absolute;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-weight:900;cursor:pointer;overflow:hidden;background:linear-gradient(160deg,#fff,#f3ecd0 55%,#e2d6a8);border:1px solid #fff;box-shadow:inset 0 -3px 0 #d6c98e,0 3px 0 #0b7a5a,0 5px 0 #065f46,0 7px 10px #0009}
+.mt.lk{filter:brightness(.6) saturate(.8);cursor:default}
+.mt.tt{position:relative}
+.mtr{display:flex;margin:16px auto 0;padding:8px 4px;border-radius:14px;background:linear-gradient(#78350f,#451a03);box-shadow:inset 0 4px 10px #0009,0 4px 0 #2a1005}
+.ms{flex:1;display:flex;justify-content:center;align-items:center;margin:0 2px;border-radius:8px;background:rgba(0,0,0,.35);box-shadow:inset 0 2px 5px #000a}
+#mmsg{cursor:pointer}
+.cd{touch-action:none}
+.cd.hid{opacity:.15}
+.dgh{position:fixed;z-index:60;pointer-events:none;filter:drop-shadow(0 8px 10px #0008)}
+.pl.bad{animation:bad .6s}
+@keyframes bad{0%,70%{background:rgba(239,68,68,.55);box-shadow:0 0 18px #ef4444;border-color:#ef4444}100%{background:none}}
+.cd.bd{animation:bdc .6s}
+@keyframes bdc{0%,70%{background:#fecaca;outline:3px solid #ef4444}}
+.bl{padding:0 2px;border-top:4px solid #e2e8f0;border-bottom:0;box-shadow:0 3px 0 #0007;background-image:none;justify-content:stretch;align-items:stretch}
+.bl i{flex:1;width:auto;height:auto;margin:3px 1px 2px;border:0;border-radius:1px;box-shadow:inset 0 0 0 1px #fff3;background:linear-gradient(160deg,#7dd3fc,#0369a1 70%)}
+.bl i.lit{background:linear-gradient(#fef08a,#f59e0b)}
+.bl i::after{display:none}
+.bl i.dr{flex:0 0 18px;margin:2px 3px 0;background:linear-gradient(#93c5fd,#1d4ed8);align-self:flex-end;height:20px;border-radius:2px 2px 0 0}
+.bl.base{background-color:#64748b!important}
+.sk{background-color:#1e293b;--c:#1e293b;background-image:repeating-linear-gradient(0deg,var(--c) 0 7px,transparent 7px 12px),repeating-linear-gradient(90deg,transparent 0 5px,#7dd3fc 5px 9px)}
+.an{position:absolute;left:50%;bottom:100%;width:2px;height:16px;background:#94a3b8}
+.wb small{font-size:clamp(14px,5vw,26px);text-align:center;padding:0 10px}
+.wb b{font-size:clamp(44px,13vw,100px)}
 </style>
 </head>
 <body>
@@ -246,10 +286,10 @@ header{flex-wrap:wrap}
     <button class="card c4" data-g="merge"><i>🍉</i><span>Fruit / Squishie Merge<small>Fusionne les fruits ou les squishies</small></span></button>
     <button class="card c5" data-g="words"><i>🔎</i><span>Mots Mêlés<small>Trouve tous les mots cachés</small></span></button>
     <button class="card c6" data-g="blast"><i>🧊</i><span>Block Blast<small>Style liquid glass</small></span></button>
-    <button class="card c7" data-g="mj"><i>🀄</i><span>Mahjong<small>Retire les paires de tuiles libres</small></span></button>
-    <button class="card c8" data-g="water"><i>🧪</i><span>Water Sort<small>Trie les liquides par couleur</small></span></button>
-    <button class="card c9" data-g="knife"><i>🔪</i><span>Knife Hit<small>Plante les couteaux sans te toucher</small></span></button>
-    <button class="card c10" data-g="solo"><i>🃏</i><span>Solitaire<small>Le classique Klondike</small></span></button>
+    <button class="card c7" data-g="mj"><i><svg width="44" height="44" viewBox="0 0 44 44"><rect x="8" y="4" width="28" height="36" rx="5" fill="#fffdf0" stroke="#0b7a5a" stroke-width="3"/><text x="22" y="29" text-anchor="middle" font-size="20" fill="#dc2626">中</text></svg></i><span>Mahjong<small>Retire les paires de tuiles libres</small></span></button>
+    <button class="card c8" data-g="water"><i><svg width="44" height="44" viewBox="0 0 44 44"><path d="M17 4h10v12l9 20a4 4 0 0 1-4 6H12a4 4 0 0 1-4-6l9-20z" fill="#38bdf8" stroke="#fff" stroke-width="2"/></svg></i><span>Water Sort<small>Trie les liquides par couleur</small></span></button>
+    <button class="card c9" data-g="knife"><i><svg width="44" height="44" viewBox="0 0 44 44"><path d="M6 38L26 6l8 6-14 26z" fill="#e5e7eb" stroke="#6b7280" stroke-width="2"/><path d="M27 8l9 6-3 5-9-6z" fill="#7c2d12"/></svg></i><span>Knife Hit<small>Plante les couteaux sans te toucher</small></span></button>
+    <button class="card c10" data-g="solo"><i><svg width="44" height="44" viewBox="0 0 44 44"><rect x="9" y="4" width="26" height="36" rx="4" fill="#fff"/><text x="22" y="30" text-anchor="middle" font-size="22" fill="#dc2626">♥</text></svg></i><span>Solitaire<small>Le classique Klondike</small></span></button>
   </section>
   <section id="mines" class="scr hidden"></section>
   <section id="tower" class="scr hidden"></section>
