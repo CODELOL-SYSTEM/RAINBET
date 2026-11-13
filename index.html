@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pexi Play</title>
+<title>Mini Jeux</title>
 <style>
 *{box-sizing:border-box;margin:0}
 body{font-family:system-ui,sans-serif;background:#10162b;color:#fff;min-height:100vh}
@@ -170,13 +170,72 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
 .bl i::after{content:'';position:absolute;left:-4px;right:-4px;bottom:-5px;height:5px;border-radius:2px;background:linear-gradient(90deg,#ec4899 0 25%,#16a34a 25% 50%,#ec4899 50% 75%,#16a34a 75%)}
 .bl i.dr{box-shadow:none;background:#78350f;border-color:#fde68a}
 .bl i.dr::after{display:none}
+/* ---- v6 : XP, Mahjong, Water Sort, Knife Hit, Solitaire ---- */
+header{flex-wrap:wrap}
+#xp{position:relative;flex:0 0 100%;height:20px;border-radius:10px;background:#0009;overflow:hidden}
+#xpb{display:block;height:100%;width:0;background:linear-gradient(90deg,#a78bfa,#f472b6);transition:width .4s}
+#xpt{position:absolute;inset:0;text-align:center;font-size:12px;font-weight:800;line-height:20px}
+.toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);z-index:100;background:linear-gradient(#a78bfa,#7c3aed);padding:10px 18px;border-radius:14px;font-weight:900;box-shadow:0 8px 20px #0007;animation:tp 2.2s forwards;text-align:center}
+.toast.big{font-size:26px;background:linear-gradient(#fde047,#f59e0b);color:#422006;animation-duration:3.5s}
+@keyframes tp{0%{opacity:0}10%{opacity:1}85%{opacity:1}100%{opacity:0}}
+.c7{background:linear-gradient(135deg,#065f46,#14532d)}
+.c8{background:linear-gradient(135deg,#0369a1,#0e7490)}
+.c9{background:linear-gradient(135deg,#92400e,#7c2d12)}
+.c10{background:linear-gradient(135deg,#166534,#064e3b)}
+.gtop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-weight:700}
+.gtop b{font-size:22px}
+.skin{display:flex;gap:6px}
+.skin button,#wsy{padding:8px 12px;font-size:13px;box-shadow:0 3px 0 #151b3d}
+.skin button.on,#wsy.on{background:linear-gradient(#34d399,#059669)}
+.box.wide{max-width:760px}
+#water,#knife,#mj,#solo{min-height:calc(100vh - 80px)}
+#water{background:linear-gradient(#0c4a6e,#082f49)}
+.wt{display:flex;flex-wrap:wrap;justify-content:center;gap:30px 16px;padding:22px 0}
+.tb{width:58px;height:160px;position:relative;cursor:pointer;transition:transform .2s;filter:drop-shadow(0 6px 8px #0007);background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.55);border-radius:6px 6px 30px 30px}
+.tb.up{transform:translateY(-18px)}
+.tb::after{content:'';position:absolute;left:10%;top:8%;bottom:12%;width:14%;border-radius:10px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.05));pointer-events:none;z-index:3}
+.lqs{position:absolute;left:3px;right:3px;bottom:3px;top:12px;display:flex;flex-direction:column-reverse;border-radius:0 0 26px 26px;overflow:hidden}
+.lq{position:relative;flex:0 0 25%;display:flex;align-items:center;justify-content:center;background-color:var(--c);background-image:linear-gradient(90deg,rgba(255,255,255,.4),rgba(255,255,255,0) 35%,rgba(0,0,0,.25))}
+.lq s{text-decoration:none;color:rgba(255,255,255,.9);text-shadow:0 1px 2px #000b;font-size:15px;font-weight:700}
+.nosym .lq s{display:none}
+.lq:last-child::before{content:'';position:absolute;left:-10%;right:-10%;top:-5px;height:10px;border-radius:50%;background-color:var(--c);background-image:linear-gradient(rgba(255,255,255,.5),rgba(255,255,255,.15));animation:wv 1.6s ease-in-out infinite alternate}
+@keyframes wv{to{transform:translateX(3px) scaleY(.7)}}
+.bottle .tb{width:70px;border:0;border-radius:0;clip-path:polygon(34% 0,66% 0,66% 20%,100% 38%,100% 94%,92% 100%,8% 100%,0 94%,0 38%,34% 20%)}
+.bottle .lqs{top:42%;left:0;right:0;bottom:0;border-radius:0}
+.vase .tb{width:72px;border:0;border-radius:0;clip-path:polygon(28% 0,72% 0,68% 14%,100% 42%,100% 88%,84% 100%,16% 100%,0 88%,0 42%,32% 14%)}
+.vase .lqs{top:44%;left:0;right:0;bottom:0;border-radius:0}
+.bottle .tb::after,.vase .tb::after{left:14%}
+#knife{background:#2b170a}
+#kc{display:block;width:100%;max-width:360px;margin:auto;border-radius:16px;border:4px solid #7c4a1e;background:radial-gradient(#7c4a1e,#2b170a);touch-action:manipulation}
+#mj{background:radial-gradient(#0f766e,#064e3b)}
+#mjb{position:relative;margin:auto}
+.mt{position:absolute;border-radius:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-weight:900;cursor:pointer;overflow:hidden;background:linear-gradient(135deg,#fffdf0,#e8e0c0);box-shadow:2px 2px 0 #cdbf8a,4px 4px 0 #0b7a5a,5px 5px 8px #0008}
+.mt.lk{filter:brightness(.72)}
+.mt.sl{background:#fde047;outline:3px solid #f59e0b}
+.mt.hn{animation:hn .35s infinite alternate}
+@keyframes hn{to{background:#86efac}}
+.md{display:grid;grid-template-columns:repeat(3,auto);gap:.06em}
+.md i{width:.5em;height:.5em;border-radius:50%;background:radial-gradient(#dc2626 28%,#2563eb 32%)}
+.mb{display:flex;flex-wrap:wrap;justify-content:center;gap:.08em;width:1.4em}
+.mb i{width:.22em;height:.6em;border-radius:2px;background:#16a34a}
+.mw{display:block;width:.8em;height:1.2em;border:.1em solid #2563eb;border-radius:.12em}
+#solo{background:#064e3b}
+.ob{display:grid;grid-template-columns:repeat(7,1fr);gap:12px 6px;padding:10px;border-radius:16px;background:radial-gradient(#15803d,#14532d);box-shadow:inset 0 0 40px #000a;border:4px solid #3f2a14;user-select:none}
+.pl{position:relative;border-radius:8px;border:2px dashed #fff4}
+.cd{position:absolute;left:0;border-radius:7px;background:#fff;color:#111;box-shadow:0 2px 4px #0007;font-weight:800;overflow:hidden;cursor:pointer}
+.cd.rd{color:#dc2626}
+.cd.dn{background:repeating-linear-gradient(45deg,#1d4ed8 0 4px,#1e3a8a 4px 8px);border:2px solid #fff}
+.cd b{position:absolute;left:4px;top:2px;font-size:clamp(11px,3.4vw,18px)}
+.cd u{position:absolute;right:5px;bottom:2px;text-decoration:none;font-size:clamp(16px,6vw,32px)}
+.cd.sl{outline:3px solid #fde047;box-shadow:0 0 12px #fde047}
 </style>
 </head>
 <body>
 <header>
   <button id="home">☰ Menu</button>
-  <b>Pexi Play</b>
+  <b>MINI JEUX</b>
   <span id="cr">💰 <span id="bal">1000</span></span>
+  <div id="xp"><i id="xpb"></i><span id="xpt">XP 0/50</span></div>
 </header>
 <main>
   <section id="menu" class="scr">
@@ -187,6 +246,10 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
     <button class="card c4" data-g="merge"><i>🍉</i><span>Fruit / Squishie Merge<small>Fusionne les fruits ou les squishies</small></span></button>
     <button class="card c5" data-g="words"><i>🔎</i><span>Mots Mêlés<small>Trouve tous les mots cachés</small></span></button>
     <button class="card c6" data-g="blast"><i>🧊</i><span>Block Blast<small>Style liquid glass</small></span></button>
+    <button class="card c7" data-g="mj"><i>🀄</i><span>Mahjong<small>Retire les paires de tuiles libres</small></span></button>
+    <button class="card c8" data-g="water"><i>🧪</i><span>Water Sort<small>Trie les liquides par couleur</small></span></button>
+    <button class="card c9" data-g="knife"><i>🔪</i><span>Knife Hit<small>Plante les couteaux sans te toucher</small></span></button>
+    <button class="card c10" data-g="solo"><i>🃏</i><span>Solitaire<small>Le classique Klondike</small></span></button>
   </section>
   <section id="mines" class="scr hidden"></section>
   <section id="tower" class="scr hidden"></section>
@@ -194,7 +257,11 @@ button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 #151b3
   <section id="merge" class="scr hidden"></section>
   <section id="words" class="scr hidden"></section>
   <section id="blast" class="scr hidden"></section>
+  <section id="mj" class="scr hidden"></section>
+  <section id="water" class="scr hidden"></section>
+  <section id="knife" class="scr hidden"></section>
+  <section id="solo" class="scr hidden"></section>
 </main>
-<script type="module" src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
