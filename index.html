@@ -213,8 +213,43 @@ input,select{background:#fff;color:#1e1b4b}
 <header>
   <button id="home">☰ Menu</button>
   <b>Pexi Play</b>
-  <span id="cr">💰 <span id="bal">1000</span></span>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+    <span id="cr">💰 <span id="bal">1000</span></span>
+    <button id="accountToggle" type="button">Compte / Connexion</button>
+  </div>
 </header>
+<section id="accountPanel" class="hidden" style="max-width:640px;margin:14px auto;padding:16px;background:#182044;border-radius:16px">
+  <div id="authLoggedOut">
+    <h2 style="margin-bottom:10px">Créer un compte ou se connecter</h2>
+    <div class="ctl">
+      <label>Email <input id="authEmail" type="email" autocomplete="email" placeholder="ton@email.com" style="width:220px"></label>
+      <label>Mot de passe <input id="authPassword" type="password" autocomplete="current-password" placeholder="6 caractères minimum" style="width:220px"></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="signInBtn" class="go" type="button">Connexion</button>
+        <button id="signUpBtn" type="button">Créer mon compte</button>
+        <button id="resetPasswordBtn" type="button">Mot de passe oublié</button>
+      </div>
+    </div>
+  </div>
+  <div id="authLoggedIn" class="hidden">
+    <h2>Mon compte</h2>
+    <p id="accountEmail" style="margin:8px 0"></p>
+    <p>Solde : <b><span id="accountBalance">0</span> pièces</b></p>
+    <button id="signOutBtn" type="button">Déconnexion</button>
+    <hr style="border-color:#ffffff33;margin:16px 0">
+    <h3>Retirer mes gains</h3>
+    <p style="opacity:.8;margin:6px 0 10px">Conversion indicative : 10 000 pièces = 3 €. Minimum : 100 000 pièces.</p>
+    <div class="ctl">
+      <label>Pièces à retirer <input id="withdrawCredits" type="number" min="100000" step="1000" value="100000" style="width:150px"></label>
+      <label>Prénom <input id="withdrawFirst" autocomplete="given-name" style="width:190px"></label>
+      <label>Nom <input id="withdrawLast" autocomplete="family-name" style="width:190px"></label>
+      <label>Email PayPal <input id="withdrawPaypal" type="email" autocomplete="email" style="width:220px"></label>
+      <p>Montant estimé : <b id="withdrawAmount">30,00 €</b></p>
+      <button id="withdrawBtn" class="out" type="button">Envoyer la demande de retrait</button>
+    </div>
+  </div>
+  <p id="accountMessage" class="msg" role="status" aria-live="polite"></p>
+</section>
 <main>
   <section id="menu" class="scr">
     <h1>Choisis ton jeu</h1>
@@ -248,6 +283,170 @@ input,select{background:#fff;color:#1e1b4b}
   <span id="xpt">XP 0/50</span>
   <div style="height:8px;background:#0003;border-radius:9px;overflow:hidden"><div id="xpb" style="height:100%;width:0;background:#facc15"></div></div>
 </div>
-<script src="app.js"></script>
+<script src="app.js"></script>\n<script type="module">\n// Firebase Pexi Play : Authentification + Firestore
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendPasswordResetEmail, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, collection,
+  runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDecLiaNoWpJSqfIV7DCPNdD8Y0iPoPT6A",
+  authDomain: "pexi-play.firebaseapp.com",
+  databaseURL: "https://pexi-play-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "pexi-play",
+  storageBucket: "pexi-play.firebasestorage.app",
+  messagingSenderId: "175370623468",
+  appId: "1:175370623468:web:82b66d44cac69b6502c8c9",
+  measurementId: "G-JFNB7XSXPL"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+try { getAnalytics(app); } catch (e) { console.info("Analytics indisponible dans cet environnement."); }
+
+const $ = id => document.getElementById(id);
+const panel = $("accountPanel");
+const message = t => $("accountMessage").textContent = t;
+const euros = n => Number(n).toLocaleString("fr-FR", {minimumFractionDigits:2, maximumFractionDigits:2});
+let currentUser = null;
+let syncing = false;
+let localBalance = 1000;
+
+$("accountToggle").addEventListener("click", () => panel.classList.toggle("hidden"));
+$("signUpBtn").addEventListener("click", async () => {
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  if (!email || password.length < 6) return message("Entre un email valide et un mot de passe d'au moins 6 caractères.");
+  try {
+    message("Création du compte…");
+    await createUserWithEmailAndPassword(auth, email, password);
+    message("Compte créé !");
+  } catch (e) { message(authError(e)); }
+});
+$("signInBtn").addEventListener("click", async () => {
+  const email = $("authEmail").value.trim();
+  const password = $("authPassword").value;
+  if (!email || !password) return message("Entre ton email et ton mot de passe.");
+  try { message("Connexion…"); await signInWithEmailAndPassword(auth, email, password); message("Connecté !"); }
+  catch (e) { message(authError(e)); }
+});
+$("resetPasswordBtn").addEventListener("click", async () => {
+  const email = $("authEmail").value.trim();
+  if (!email) return message("Entre ton email pour recevoir le lien de réinitialisation.");
+  try { await sendPasswordResetEmail(auth, email); message("Email de réinitialisation envoyé."); }
+  catch (e) { message(authError(e)); }
+});
+$("signOutBtn").addEventListener("click", async () => {
+  try { await signOut(auth); message("Déconnecté."); }
+  catch (e) { message(authError(e)); }
+});
+
+function authError(e) {
+  const codes = {
+    "auth/email-already-in-use": "Cet email possède déjà un compte.",
+    "auth/invalid-email": "Adresse email invalide.",
+    "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+    "auth/invalid-credential": "Email ou mot de passe incorrect.",
+    "auth/user-not-found": "Aucun compte trouvé pour cet email.",
+    "auth/network-request-failed": "Erreur réseau. Vérifie ta connexion.",
+    "auth/operation-not-allowed": "Active « Email/Password » dans Firebase Authentication."
+  };
+  return codes[e.code] || `Erreur Firebase : ${e.message || e.code}`;
+}
+function displayBalance(value) {
+  localBalance = Number(value) || 0;
+  const formatted = Math.floor(localBalance).toLocaleString("fr-FR");
+  $("accountBalance").textContent = formatted;
+  const bal = $("bal");
+  if (bal) bal.textContent = formatted;
+}
+window.PexiPersistBalance = async value => {
+  localBalance = Number(value) || 0;
+  if (!currentUser || syncing) return;
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      balance: localBalance, updatedAt: serverTimestamp()
+    });
+  } catch (e) { console.error("Sauvegarde du solde impossible", e); }
+};
+
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+  $("authLoggedOut").classList.toggle("hidden", !!user);
+  $("authLoggedIn").classList.toggle("hidden", !user);
+  if (!user) {
+    $("accountEmail").textContent = "";
+    window.PexiPersistBalance = null;
+    return;
+  }
+  $("accountEmail").textContent = user.email || "Compte connecté";
+  syncing = true;
+  try {
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, { email: user.email || "", balance: 1000, createdAt: serverTimestamp() });
+      displayBalance(1000);
+    } else {
+      const value = Number(snap.data().balance ?? 1000);
+      displayBalance(value);
+      // Le solde Firebase devient la source du compte connecté.
+      if (typeof window.setBal === "function") window.setBal(value);
+    }
+    message("Compte connecté et solde synchronisé.");
+  } catch (e) {
+    message("Compte connecté, mais lecture Firestore impossible : " + e.message);
+  } finally { syncing = false; }
+});
+
+function updateWithdrawalEstimate() {
+  const credits = Math.max(0, Number($("withdrawCredits").value) || 0);
+  $("withdrawAmount").textContent = euros(credits * 3 / 10000) + " €";
+}
+$("withdrawCredits").addEventListener("input", updateWithdrawalEstimate);
+$("withdrawBtn").addEventListener("click", async () => {
+  if (!currentUser) return message("Connecte-toi pour demander un retrait.");
+  const credits = Math.floor(Number($("withdrawCredits").value));
+  const firstName = $("withdrawFirst").value.trim();
+  const lastName = $("withdrawLast").value.trim();
+  const paypalEmail = $("withdrawPaypal").value.trim();
+  if (!Number.isFinite(credits) || credits < 100000) return message("Le retrait minimum est de 100 000 pièces.");
+  if (credits > localBalance) return message("Tu n'as pas assez de pièces.");
+  if (!firstName || !lastName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypalEmail))
+    return message("Complète ton prénom, ton nom et une adresse PayPal valide.");
+  const amountEuros = Math.round(credits * 3 / 10000 * 100) / 100;
+  const btn = $("withdrawBtn");
+  btn.disabled = true;
+  try {
+    const userRef = doc(db, "users", currentUser.uid);
+    const requestRef = doc(collection(db, "withdrawalRequests"));
+    await runTransaction(db, async tx => {
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists()) throw new Error("Compte introuvable.");
+      const balance = Number(userSnap.data().balance ?? 0);
+      if (balance < credits) throw new Error("Solde insuffisant.");
+      tx.update(userRef, { balance: balance - credits, updatedAt: serverTimestamp() });
+      tx.set(requestRef, {
+        uid: currentUser.uid, credits, amountEuros, firstName, lastName,
+        paypalEmail, status: "pending", createdAt: serverTimestamp()
+      });
+    });
+    displayBalance(localBalance - credits);
+    message("Demande envoyée. Elle est en attente de validation.");
+    $("withdrawCredits").value = 100000;
+    updateWithdrawalEstimate();
+  } catch (e) {
+    message("Retrait non envoyé : " + (e.message || e.code));
+  } finally { btn.disabled = false; }
+});
+updateWithdrawalEstimate();
+\n</script>
 </body>
 </html>
