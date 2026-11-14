@@ -248,6 +248,13 @@ input,select{background:#fff;color:#1e1b4b}
       <button id="withdrawBtn" class="out" type="button">Envoyer la demande de retrait</button>
     </div>
   </div>
+  <section id="adminDashboard" class="hidden" style="margin-top:18px;padding-top:16px;border-top:1px solid #ffffff44">
+    <h2>Dashboard administrateur</h2>
+    <p style="opacity:.8;margin:6px 0 12px">Demandes de retrait à traiter manuellement sur PayPal.</p>
+    <button id="refreshAdminBtn" type="button">Actualiser le dashboard</button>
+    <div id="adminStats" style="margin:12px 0"></div>
+    <div id="adminRequests"></div>
+  </section>
   <p id="accountMessage" class="msg" role="status" aria-live="polite"></p>
 </section>
 <main>
@@ -290,7 +297,7 @@ import {
   sendPasswordResetEmail, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, collection,
+  getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs,
   runTransaction, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
@@ -383,10 +390,13 @@ onAuthStateChanged(auth, async user => {
   $("authLoggedIn").classList.toggle("hidden", !user);
   if (!user) {
     $("accountEmail").textContent = "";
+    adminPanel.classList.add("hidden");
     window.PexiPersistBalance = null;
     return;
   }
   $("accountEmail").textContent = user.email || "Compte connecté";
+  adminPanel.classList.toggle("hidden", user.email !== ADMIN_EMAIL);
+  if (user.email === ADMIN_EMAIL) loadAdminDashboard();
   syncing = true;
   try {
     const ref = doc(db, "users", user.uid);
@@ -405,6 +415,69 @@ onAuthStateChanged(auth, async user => {
     message("Compte connecté, mais lecture Firestore impossible : " + e.message);
   } finally { syncing = false; }
 });
+
+
+const ADMIN_EMAIL = "pc2alex.les@gmail.com";
+const adminPanel = $("adminDashboard");
+async function loadAdminDashboard() {
+  if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+  const list = $("adminRequests");
+  list.textContent = "Chargement des demandes…";
+  try {
+    const snap = await getDocs(collection(db, "withdrawalRequests"));
+    const requests = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const pending = requests.filter(r => r.status === "pending").length;
+    $("adminStats").textContent = `${requests.length} demande(s) · ${pending} en attente`;
+    list.replaceChildren();
+    if (!requests.length) { list.textContent = "Aucune demande de retrait pour le moment."; return; }
+    for (const r of requests) {
+      const card = document.createElement("div");
+      card.style.cssText = "background:#222b52;border-radius:12px;padding:12px;margin:10px 0";
+      const date = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString("fr-FR") : "Date indisponible";
+      const title = document.createElement("b");
+      title.textContent = `${r.firstName || ""} ${r.lastName || ""} — ${euros(r.amountEuros || 0)} €`;
+      const details = document.createElement("p");
+      details.style.cssText = "margin:6px 0;overflow-wrap:anywhere";
+      details.textContent = `${Number(r.credits || 0).toLocaleString("fr-FR")} pièces · PayPal : ${r.paypalEmail || "—"} · ${date} · Statut : ${r.status || "inconnu"}`;
+      card.append(title, details);
+      if (r.status === "pending") {
+        const paid = document.createElement("button");
+        paid.textContent = "Marquer comme payé";
+        paid.style.marginRight = "8px";
+        paid.onclick = () => updateWithdrawalStatus(r, "paid");
+        const rejected = document.createElement("button");
+        rejected.textContent = "Refuser et rembourser";
+        rejected.onclick = () => updateWithdrawalStatus(r, "rejected");
+        card.append(paid, rejected);
+      }
+      list.append(card);
+    }
+  } catch (e) {
+    list.textContent = "Erreur dashboard : " + (e.message || e.code);
+  }
+}
+async function updateWithdrawalStatus(request, status) {
+  if (!currentUser || currentUser.email !== ADMIN_EMAIL) return;
+  try {
+    const reqRef = doc(db, "withdrawalRequests", request.id);
+    if (status === "rejected") {
+      const userRef = doc(db, "users", request.uid);
+      await runTransaction(db, async tx => {
+        const [reqSnap, userSnap] = await Promise.all([tx.get(reqRef), tx.get(userRef)]);
+        if (!reqSnap.exists() || reqSnap.data().status !== "pending") throw new Error("Cette demande a déjà été traitée.");
+        if (!userSnap.exists()) throw new Error("Compte utilisateur introuvable.");
+        tx.update(userRef, { balance: Number(userSnap.data().balance || 0) + Number(request.credits || 0), updatedAt: serverTimestamp() });
+        tx.update(reqRef, { status: "rejected", processedAt: serverTimestamp() });
+      });
+    } else {
+      await updateDoc(reqRef, { status: "paid", processedAt: serverTimestamp() });
+    }
+    message(status === "paid" ? "Demande marquée comme payée. Vérifie le paiement PayPal avant cette action." : "Demande refusée et crédits remboursés.");
+    await loadAdminDashboard();
+  } catch (e) { message("Traitement impossible : " + (e.message || e.code)); }
+}
+$("refreshAdminBtn").addEventListener("click", loadAdminDashboard);
 
 function updateWithdrawalEstimate() {
   const credits = Math.max(0, Number($("withdrawCredits").value) || 0);
@@ -438,7 +511,9 @@ $("withdrawBtn").addEventListener("click", async () => {
         paypalEmail, status: "pending", createdAt: serverTimestamp()
       });
     });
-    displayBalance(localBalance - credits);
+    const newBalance = localBalance - credits;
+    if (typeof window.setBal === "function") window.setBal(newBalance);
+    else displayBalance(newBalance);
     message("Demande envoyée. Elle est en attente de validation.");
     $("withdrawCredits").value = 100000;
     updateWithdrawalEstimate();
