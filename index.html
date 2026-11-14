@@ -290,7 +290,9 @@ input,select{background:#fff;color:#1e1b4b}
   <span id="xpt">XP 0/50</span>
   <div style="height:8px;background:#0003;border-radius:9px;overflow:hidden"><div id="xpb" style="height:100%;width:0;background:#facc15"></div></div>
 </div>
-<script src="app.js"></script>\n<script type="module">\n// Firebase Pexi Play : Authentification + Firestore
+<script src="app.js"></script>
+<script type="module">
+// Firebase Pexi Play : Authentification + Firestore
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -522,6 +524,7 @@ $("withdrawBtn").addEventListener("click", async () => {
   } finally { btn.disabled = false; }
 });
 updateWithdrawalEstimate();
-\n</script>
+
+</script>
 </body>
 </html>
