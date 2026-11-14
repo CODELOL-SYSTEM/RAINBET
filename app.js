@@ -6,6 +6,8 @@ const fmt = v => {
   const t = i ? (x < 10 ? x.toFixed(2) : x < 100 ? x.toFixed(1) : x.toFixed(0)) : x.toFixed(2);
   return (v < 0 ? '-' : '') + (+t) + u[i];
 };
+// Expose le setter pour que le module Firebase puisse synchroniser le solde.
+window.setBal = setBal;
 const fx = m => m < 1000 ? m.toFixed(2) : fmt(m);
 const $ = s => document.querySelector(s);
 let bal = 1000, stop = () => {};
