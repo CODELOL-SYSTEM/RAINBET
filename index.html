@@ -237,6 +237,14 @@ input,select{background:#fff;color:#1e1b4b}
     <p>Solde : <b><span id="accountBalance">0</span> pièces</b></p>
     <button id="signOutBtn" type="button">Déconnexion</button>
     <hr style="border-color:#ffffff33;margin:16px 0">
+    <h3>Ajouter des pièces</h3>
+    <p style="opacity:.85;margin:6px 0 10px">Choisis une offre pour ouvrir le paiement PayPal.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button id="deposit5Btn" class="go" type="button">5 € → 5M pièces</button>
+      <button id="deposit10Btn" class="go" type="button">10 € → 18M pièces</button>
+    </div>
+    <p style="font-size:13px;opacity:.75;margin-top:8px">Les pièces sont ajoutées après vérification du paiement. Le simple retour depuis PayPal ne confirme pas automatiquement un paiement.</p>
+    <hr style="border-color:#ffffff33;margin:16px 0">
     <h3>Retirer mes gains</h3>
     <p style="opacity:.8;margin:6px 0 10px">Conversion indicative : 10 000 pièces = 3 €. Minimum : 100 000 pièces.</p>
     <div class="ctl">
@@ -357,6 +365,16 @@ $("signOutBtn").addEventListener("click", async () => {
   catch (e) { message(authError(e)); }
 });
 
+// Les liens PayPal.Me préremplissent le montant en euros.
+$("deposit5Btn").addEventListener("click", () => {
+  window.open("https://www.paypal.com/paypalme/SH0PNOVA/5EUR", "_blank", "noopener");
+  message("Paiement PayPal de 5 € ouvert. Les 5M pièces seront créditées après vérification.");
+});
+$("deposit10Btn").addEventListener("click", () => {
+  window.open("https://www.paypal.com/paypalme/SH0PNOVA/10EUR", "_blank", "noopener");
+  message("Paiement PayPal de 10 € ouvert. Les 18M pièces seront créditées après vérification.");
+});
+
 function authError(e) {
   const codes = {
     "auth/email-already-in-use": "Cet email possède déjà un compte.",
@@ -405,6 +423,7 @@ onAuthStateChanged(auth, async user => {
     const snap = await getDoc(ref);
     if (!snap.exists()) {
       await setDoc(ref, { email: user.email || "", balance: 1000, createdAt: serverTimestamp() });
+      if (typeof window.setBal === "function") window.setBal(1000);
       displayBalance(1000);
     } else {
       const value = Number(snap.data().balance ?? 1000);
