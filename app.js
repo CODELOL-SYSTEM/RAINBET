@@ -15,6 +15,8 @@ function setBal(v) {
   bal = Math.max(1, Math.round(v * 100) / 100); // jamais en dessous de 1 crédit
   $('#bal').textContent = fmt(bal);
   try { localStorage.setItem('mj_bal', bal); } catch (e) {}
+  // Synchronisation du solde du compte connecté (Firebase, chargé séparément)
+  if (window.PexiPersistBalance) window.PexiPersistBalance(bal);
 }
 function show(id) {
   stop(); stop = () => {};
